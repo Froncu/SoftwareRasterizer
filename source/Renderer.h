@@ -35,9 +35,15 @@ private:
 	SDL_Surface* m_pBackBuffer;
 	uint32_t* m_pBackBufferPixels;
 
-	//float* m_pDepthBufferPixels;
+	float* m_pDepthBufferPixels;
 
 	int
 		m_Width,
 		m_Height;
+
+	float m_AspectRatio;
+
+	std::vector<Vertex> m_vVerticesWorld;
+
+	std::vector<float> m_vRatios;
 };
