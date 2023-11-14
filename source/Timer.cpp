@@ -1,6 +1,5 @@
 #include "Timer.h"
 #include "SDL.h"
-using namespace dae;
 
 Timer::Timer()
 {

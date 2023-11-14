@@ -1,7 +1,7 @@
 #pragma once
 #include <SDL_surface.h>
 #include <string>
-#include "ColorRGB.h"
+#include "ColorRGB.hpp"
 
 namespace dae
 {

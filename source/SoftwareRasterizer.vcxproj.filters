@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="Constants.hpp">
+      <Filter>Mathematics</Filter>
+    </ClInclude>
+    <ClInclude Include="Mathematics.hpp">
+      <Filter>Mathematics</Filter>
+    </ClInclude>
+    <ClInclude Include="Utilities.hpp">
+      <Filter>Mathematics</Filter>
+    </ClInclude>
+    <ClInclude Include="Vector2.hpp">
+      <Filter>Mathematics</Filter>
+    </ClInclude>
+    <ClInclude Include="Vector3.hpp">
+      <Filter>Mathematics</Filter>
+    </ClInclude>
+    <ClInclude Include="Vector4.hpp">
+      <Filter>Mathematics</Filter>
+    </ClInclude>
+    <ClInclude Include="VectorConversions.hpp">
+      <Filter>Mathematics</Filter>
+    </ClInclude>
+    <ClInclude Include="Matrix.hpp">
+      <Filter>Mathematics</Filter>
+    </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>Miscellaneous\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer.h">
+      <Filter>Miscellaneous\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer.h">
+      <Filter>Miscellaneous\Timer</Filter>
+    </ClInclude>
+    <ClInclude Include="DataTypes.hpp">
+      <Filter>Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="ColorRGB.hpp">
+      <Filter>Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="Texture.h">
+      <Filter>Objects\Texture</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Camera.cpp">
+      <Filter>Miscellaneous\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer.cpp">
+      <Filter>Miscellaneous\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Timer.cpp">
+      <Filter>Miscellaneous\Timer</Filter>
+    </ClCompile>
+    <ClCompile Include="Texture.cpp">
+      <Filter>Objects\Texture</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Mathematics">
+      <UniqueIdentifier>{f7261186-da77-45fd-b82b-18b1f4e4aa21}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Miscellaneous">
+      <UniqueIdentifier>{6ed22c6b-6c76-49fa-8f5c-fb129c3373fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Miscellaneous\Camera">
+      <UniqueIdentifier>{94ff96c8-8b86-44e8-81b0-3e9e913ea71a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Miscellaneous\Renderer">
+      <UniqueIdentifier>{1a2cfd21-10b5-406d-8e7f-689aee5536b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Miscellaneous\Timer">
+      <UniqueIdentifier>{72fc4e59-1da6-472b-b09e-4947a43e2294}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Objects">
+      <UniqueIdentifier>{9eb1c226-e5ee-4dc8-863d-98204742ee8b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Objects\Texture">
+      <UniqueIdentifier>{eb839eef-daa5-4620-8b3a-ede38a17b5cb}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
