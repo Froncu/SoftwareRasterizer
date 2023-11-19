@@ -1,43 +1,42 @@
 #include "Texture.h"
 
 #include "SDL.h"
+#include "SDL_Image.h"
 #include "Vector2.h"
 #include "ColorRGB.h"
 
 #pragma region Constructors/Destructor
-Texture::Texture(SDL_Surface* pSurface) :
-	m_pSurface{ pSurface },
-	m_pSurfacePixels{ (uint32_t*)pSurface->pixels }
+Texture::Texture(const std::string& path) :
+	m_pSurface{ IMG_Load(path.c_str()) },
+	m_pSurfacePixels{ static_cast<uint32_t*>(m_pSurface->pixels) }
 {
 }
 
 Texture::~Texture()
 {
-	if (m_pSurface)
-	{
-		SDL_FreeSurface(m_pSurface);
-		m_pSurface = nullptr;
-	}
+	SDL_FreeSurface(m_pSurface);
 }
 #pragma endregion
 
 
 
 #pragma region Public Methods
-Texture* Texture::LoadFromFile(const std::string& path)
+ColorRGB Texture::Sample(const Vector2& UVValue) const
 {
-	//TODO
-	//Load SDL_Surface using IMG_LOAD
-	//Create & Return a new Texture Object (using SDL_Surface)
+	if (UVValue.x < 0.0f || UVValue.x > 1.0f || UVValue.y < 0.0f || UVValue.y > 1.0f)
+		return ColorRGB{ GRAY };
 
-	return nullptr;
-}
+	const int
+		surfaceWidth{ m_pSurface->w },
+		pixelIndexX{ static_cast<int>((surfaceWidth - 1) * UVValue.x) },
+		pixelIndexY{ static_cast<int>((m_pSurface->h - 1) * UVValue.y) };
 
-ColorRGB Texture::Sample(const Vector2& uv) const
-{
-	//TODO
-	//Sample the correct texel for the given uv
+	Uint8
+		red,
+		green,
+		blue;
 
-	return {};
+	SDL_GetRGB(m_pSurfacePixels[pixelIndexX + pixelIndexY * surfaceWidth], m_pSurface->format, &red, &green, &blue);
+	return ColorRGB(red / 255.0f, green / 255.0f, blue / 255.0f);
 }
 #pragma endregion

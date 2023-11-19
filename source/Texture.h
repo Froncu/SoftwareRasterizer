@@ -2,9 +2,9 @@
 
 #include <string>
 
-struct SDL_Surface;
 struct ColorRGB;
 struct Vector2;
+struct SDL_Surface;
 class Texture final
 {
 public:
@@ -15,9 +15,7 @@ public:
 	Texture& operator=(const Texture&) = delete;
 	Texture& operator=(Texture&&) noexcept = delete;
 
-	Texture(SDL_Surface* pSurface);
-
-	static Texture* LoadFromFile(const std::string& path);
+	Texture(const std::string& path);
 
 	ColorRGB Sample(const Vector2& uv) const;
 
