@@ -1,28 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClInclude Include="Constants.hpp">
-      <Filter>Mathematics</Filter>
-    </ClInclude>
     <ClInclude Include="Mathematics.hpp">
       <Filter>Mathematics</Filter>
     </ClInclude>
     <ClInclude Include="Utilities.hpp">
-      <Filter>Mathematics</Filter>
-    </ClInclude>
-    <ClInclude Include="Vector2.hpp">
-      <Filter>Mathematics</Filter>
-    </ClInclude>
-    <ClInclude Include="Vector3.hpp">
-      <Filter>Mathematics</Filter>
-    </ClInclude>
-    <ClInclude Include="Vector4.hpp">
-      <Filter>Mathematics</Filter>
-    </ClInclude>
-    <ClInclude Include="VectorConversions.hpp">
-      <Filter>Mathematics</Filter>
-    </ClInclude>
-    <ClInclude Include="Matrix.hpp">
       <Filter>Mathematics</Filter>
     </ClInclude>
     <ClInclude Include="Camera.h">
@@ -34,14 +16,26 @@
     <ClInclude Include="Timer.h">
       <Filter>Miscellaneous\Timer</Filter>
     </ClInclude>
-    <ClInclude Include="DataTypes.hpp">
-      <Filter>Objects</Filter>
-    </ClInclude>
-    <ClInclude Include="ColorRGB.hpp">
-      <Filter>Objects</Filter>
-    </ClInclude>
     <ClInclude Include="Texture.h">
       <Filter>Objects\Texture</Filter>
+    </ClInclude>
+    <ClInclude Include="ColorRGB.h">
+      <Filter>Objects\ColorRGB</Filter>
+    </ClInclude>
+    <ClInclude Include="Vector4.h">
+      <Filter>Mathematics\Vectors\Vector4</Filter>
+    </ClInclude>
+    <ClInclude Include="Vector2.h">
+      <Filter>Mathematics\Vectors\Vector2</Filter>
+    </ClInclude>
+    <ClInclude Include="Vector3.h">
+      <Filter>Mathematics\Vectors\Vector3</Filter>
+    </ClInclude>
+    <ClInclude Include="Matrix.h">
+      <Filter>Mathematics\Matrix</Filter>
+    </ClInclude>
+    <ClInclude Include="DataTypes.hpp">
+      <Filter>Mathematics</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -57,6 +51,21 @@
     </ClCompile>
     <ClCompile Include="Texture.cpp">
       <Filter>Objects\Texture</Filter>
+    </ClCompile>
+    <ClCompile Include="ColorRGB.cpp">
+      <Filter>Objects\ColorRGB</Filter>
+    </ClCompile>
+    <ClCompile Include="Vector4.cpp">
+      <Filter>Mathematics\Vectors\Vector4</Filter>
+    </ClCompile>
+    <ClCompile Include="Vector2.cpp">
+      <Filter>Mathematics\Vectors\Vector2</Filter>
+    </ClCompile>
+    <ClCompile Include="Vector3.cpp">
+      <Filter>Mathematics\Vectors\Vector3</Filter>
+    </ClCompile>
+    <ClCompile Include="Matrix.cpp">
+      <Filter>Mathematics\Matrix</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -80,6 +89,24 @@
     </Filter>
     <Filter Include="Objects\Texture">
       <UniqueIdentifier>{eb839eef-daa5-4620-8b3a-ede38a17b5cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Objects\ColorRGB">
+      <UniqueIdentifier>{d4d469cd-2dfa-406d-8648-772915894ea5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Mathematics\Vectors">
+      <UniqueIdentifier>{c89864c9-3e3d-4fef-9d93-ce23413532f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Mathematics\Vectors\Vector4">
+      <UniqueIdentifier>{d08ab9e6-6abf-4001-be14-317c878c7bd3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Mathematics\Vectors\Vector2">
+      <UniqueIdentifier>{378193ef-cdc7-4a43-96d1-cb1d8238741c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Mathematics\Vectors\Vector3">
+      <UniqueIdentifier>{f0fcb737-47d3-4582-8995-b53509097ddd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Mathematics\Matrix">
+      <UniqueIdentifier>{3fe458be-b8d9-4a31-b102-e4702d2131be}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

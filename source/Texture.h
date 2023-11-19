@@ -1,24 +1,27 @@
 #pragma once
-#include <SDL_surface.h>
+
 #include <string>
-#include "ColorRGB.hpp"
 
-namespace dae
+struct SDL_Surface;
+struct ColorRGB;
+struct Vector2;
+class Texture final
 {
-	struct Vector2;
+public:
+	~Texture();
 
-	class Texture
-	{
-	public:
-		~Texture();
+	Texture(const Texture&) = delete;
+	Texture(Texture&&) noexcept = delete;
+	Texture& operator=(const Texture&) = delete;
+	Texture& operator=(Texture&&) noexcept = delete;
 
-		static Texture* LoadFromFile(const std::string& path);
-		ColorRGB Sample(const Vector2& uv) const;
+	Texture(SDL_Surface* pSurface);
 
-	private:
-		Texture(SDL_Surface* pSurface);
+	static Texture* LoadFromFile(const std::string& path);
 
-		SDL_Surface* m_pSurface{ nullptr };
-		uint32_t* m_pSurfacePixels{ nullptr };
-	};
-}
+	ColorRGB Sample(const Vector2& uv) const;
+
+private:
+	SDL_Surface* m_pSurface;
+	uint32_t* m_pSurfacePixels;
+};

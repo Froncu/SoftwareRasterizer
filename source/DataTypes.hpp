@@ -2,9 +2,10 @@
 
 #include <vector>
 
-#include "Matrix.hpp"
-#include "Vector2.hpp"
-#include "ColorRGB.hpp"
+#include "ColorRGB.h"
+#include "Vector3.h"
+#include "Vector4.h"
+#include "Matrix.h"
 
 struct Int2
 {
@@ -23,7 +24,7 @@ struct Vertex
 	//Vector3 viewDirection{}; //W4
 };
 
-struct Vertex_Out
+struct VertexOut
 {
 	Vector4 position;
 	ColorRGB color;
@@ -39,20 +40,12 @@ enum class PrimitiveTopology
 	TriangleStrip
 };
 
-struct Triangle
-{
-	const Vertex
-		& vertex0,
-		& vertex1,
-		& vertex2;
-};
-
 struct Mesh
 {
-	std::vector<Vertex> vertices{};
-	std::vector<uint32_t> indices{};
+	std::vector<Vertex> vVertices{};
+	std::vector<uint32_t> vIndices{};
 	PrimitiveTopology primitiveTopology{ PrimitiveTopology::TriangleStrip };
 
-	std::vector<Vertex_Out> vertices_out{};
+	std::vector<VertexOut> vVerticesOut{};
 	Matrix worldMatrix;
 };

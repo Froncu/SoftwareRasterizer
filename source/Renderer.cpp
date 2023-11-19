@@ -2,7 +2,9 @@
 #include "SDL.h"
 #include "Texture.h"
 #include "Utilities.hpp"
+#include "Vector2.h"
 
+#pragma region Constructors/Destructor
 Renderer::Renderer(SDL_Window* pWindow) :
 	m_pWindow{ pWindow },
 
@@ -13,8 +15,8 @@ Renderer::Renderer(SDL_Window* pWindow) :
 	m_vVerticesWorld
 	{
 		Vertex(Vector3(0.0f, 2.0f, 0.0f), RED),
-		Vertex(Vector3(1.5f, -1.0f, 0.0f), GREEN),
-		Vertex(Vector3(-1.5f, -1.0f, 0.0f), BLUE),
+		Vertex(Vector3(1.5f, -1.0f, 0.0f), RED),
+		Vertex(Vector3(-1.5f, -1.0f, 0.0f), RED),
 
 		Vertex(Vector3(0.0f, 4.0f, 2.0f), RED),
 		Vertex(Vector3(3.0f, -2.0f, 2.0f), GREEN),
@@ -33,7 +35,11 @@ Renderer::~Renderer()
 {
 	delete[] m_pDepthBufferPixels;
 }
+#pragma endregion
 
+
+
+#pragma region Public Methods
 void Renderer::Update(const Timer& timer)
 {
 	m_Camera.Update(timer);
@@ -43,10 +49,8 @@ void Renderer::Render()
 {
 	SDL_LockSurface(m_pBackBuffer);
 	
-	memset(m_pBackBufferPixels, 0, m_Width * m_Height * sizeof(uint32_t));
-	for (int index{}; index < m_Width * m_Height; ++index)
-		//m_pBackBufferPixels[index] = 0,
-		m_pDepthBufferPixels[index] = INFINITY;
+	std::fill_n(m_pBackBufferPixels, m_Width * m_Height, 0);
+	std::fill_n(m_pDepthBufferPixels, m_Width * m_Height, INFINITY);
 
 	std::vector<Vertex> vVerticesScreen{};
 	VertexTransformationFunction(m_vVerticesWorld, vVerticesScreen);
@@ -75,22 +79,22 @@ void Renderer::Render()
 				const Vector2 pixelPosition{ px, py };
 
 				Vector2
-					a{ GetVector2(v1Position) - GetVector2(v0Position) },
-					c{ pixelPosition - GetVector2(v0Position) };
+					a{ v1Position.GetVector2() - v0Position.GetVector2() },
+					c{ pixelPosition - v0Position.GetVector2() };
 
 				const float v2SignedArea{ Vector2::Cross(a, c) };
 				if (v2SignedArea < 0.0f)
 					continue;
 
-				a = GetVector2(v2Position) - GetVector2(v1Position);
-				c = pixelPosition - GetVector2(v1Position);
+				a = v2Position.GetVector2() - v1Position.GetVector2();
+				c = pixelPosition - v1Position.GetVector2();
 
 				const float v0SignedArea{ Vector2::Cross(a, c) };
 				if (v0SignedArea < 0.0f)
 					continue;
 
-				a = GetVector2(v0Position) - GetVector2(v2Position);
-				c = pixelPosition - GetVector2(v2Position);
+				a = v0Position.GetVector2() - v2Position.GetVector2();
+				c = pixelPosition - v2Position.GetVector2();
 
 				const float v1SignedArea{ Vector2::Cross(a, c) };
 				if (v1SignedArea < 0.0f)
@@ -113,7 +117,7 @@ void Renderer::Render()
 
 				m_pDepthBufferPixels[pixelIndex] = pixelDepth;
 
-				const ColorRGB finalColor{ (v0.color * v0Ratio + v1.color * v1Ratio + v2.color * v2Ratio).GetMaxToOne() };
+				const ColorRGB finalColor{ v0.color * v0Ratio + v1.color * v1Ratio + v2.color * v2Ratio };
 
 				m_pBackBufferPixels[pixelIndex] = SDL_MapRGB(m_pBackBuffer->format,
 					static_cast<uint8_t>(finalColor.red * 255),
@@ -127,6 +131,15 @@ void Renderer::Render()
 	SDL_UpdateWindowSurface(m_pWindow);
 }
 
+bool Renderer::SaveBufferToImage() const
+{
+	return SDL_SaveBMP(m_pBackBuffer, "Rasterizer_ColorBuffer.bmp");
+}
+#pragma endregion
+
+
+
+#pragma region Private Methods
 void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vVerticesIn, std::vector<Vertex>& vVerticesOut) const
 {
 	const Matrix& viewMatrix{ m_Camera.GetViewMatrix() };
@@ -157,8 +170,4 @@ void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vVertices
 		);
 	}
 }
-
-bool Renderer::SaveBufferToImage() const
-{
-	return SDL_SaveBMP(m_pBackBuffer, "Rasterizer_ColorBuffer.bmp");
-}
+#pragma endregion

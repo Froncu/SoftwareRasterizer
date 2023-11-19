@@ -11,13 +11,14 @@ struct SDL_Surface;
 class Renderer final
 {
 public:
-	Renderer(SDL_Window* pWindow);
 	~Renderer();
 
 	Renderer(const Renderer&) = delete;
 	Renderer(Renderer&&) noexcept = delete;
 	Renderer& operator=(const Renderer&) = delete;
 	Renderer& operator=(Renderer&&) noexcept = delete;
+	
+	Renderer(SDL_Window* pWindow);
 
 	void Update(const Timer& timer);
 	void Render();
@@ -31,19 +32,15 @@ private:
 
 	SDL_Window* m_pWindow;
 
-	SDL_Surface* m_pFrontBuffer;
-	SDL_Surface* m_pBackBuffer;
+	SDL_Surface* m_pFrontBuffer, * m_pBackBuffer;
+
 	uint32_t* m_pBackBufferPixels;
 
 	float* m_pDepthBufferPixels;
 
-	int
-		m_Width,
-		m_Height;
+	int m_Width, m_Height;
 
 	float m_AspectRatio;
 
-	std::vector<Vertex> m_vVerticesWorld;
-
-	std::vector<float> m_vRatios;
+	const std::vector<Vertex> m_vVerticesWorld;
 };
