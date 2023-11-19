@@ -5,7 +5,6 @@
 
 #include "DataTypes.hpp"
 
-#define DISABLE_OBJ
 static bool ParseOBJ(const std::string& filename, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, bool flipAxisAndWinding = true)
 {
 #ifdef DISABLE_OBJ
@@ -87,7 +86,7 @@ static bool ParseOBJ(const std::string& filename, std::vector<Vertex>& vertices,
 					{
 						// Optional texture coordinate
 						file >> iTexCoord;
-						vertex.uv = UVs[iTexCoord - 1];
+						vertex.UVValue = UVs[iTexCoord - 1];
 					}
 
 					if ('/' == file.peek())
@@ -131,9 +130,9 @@ static bool ParseOBJ(const std::string& filename, std::vector<Vertex>& vertices,
 		const Vector3& p0 = vertices[index0].position;
 		const Vector3& p1 = vertices[index1].position;
 		const Vector3& p2 = vertices[index2].position;
-		const Vector2& uv0 = vertices[index0].uv;
-		const Vector2& uv1 = vertices[index1].uv;
-		const Vector2& uv2 = vertices[index2].uv;
+		const Vector2& uv0 = vertices[index0].UVValue;
+		const Vector2& uv1 = vertices[index1].UVValue;
+		const Vector2& uv2 = vertices[index2].UVValue;
 
 		const Vector3 edge0 = p1 - p0;
 		const Vector3 edge1 = p2 - p0;

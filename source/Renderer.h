@@ -43,7 +43,7 @@ private:
 
 	float m_AspectRatio;
 
-	const std::vector<Mesh> m_vWorldMeshes;
+	std::vector<Mesh> m_vWorldMeshes;
 
 	const Texture m_Texture;
 };

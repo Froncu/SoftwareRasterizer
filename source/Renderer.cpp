@@ -5,14 +5,7 @@
 #include "Utilities.hpp"
 #include "Vector2.h"
 
-//#define SPEED
-//#define TRIANGLE_LIST
 //#define MULTI_THREAD
-
-#ifdef SPEED
-	#define TRIANGLE_LIST
-	#define MULTI_THREAD
-#endif
 
 #pragma region Constructors/Destructor
 Renderer::Renderer(SDL_Window* pWindow) :
@@ -25,42 +18,13 @@ Renderer::Renderer(SDL_Window* pWindow) :
 	m_vWorldMeshes
 	{
 		{
-			{
-				Vertex(Vector3(-3.0f, 3.0f, -2.0f), WHITE, Vector2(0.0f, 0.0f)),
-				Vertex(Vector3(0.0f, 3.0f, -2.0f), WHITE, Vector2(0.5f, 0.0f)),
-				Vertex(Vector3(3.0f, 3.0f, -2.0f), WHITE, Vector2(1.0f, 0.0f)),
-				Vertex(Vector3(-3.0f, 0.0f, -2.0f), WHITE, Vector2(0.0f, 0.5f)),
-				Vertex(Vector3(0.0f, 0.0f, -2.0f), WHITE, Vector2(0.5f, 0.5f)),
-				Vertex(Vector3(3.0f, 0.0f, -2.0f), WHITE, Vector2(1.0f, 0.5f)),
-				Vertex(Vector3(-3.0f, -3.0f, -2.0f), WHITE, Vector2(0.0f, 1.0f)),
-				Vertex(Vector3(0.0f, -3.0f, -2.0f), WHITE, Vector2(0.5f, 1.0f)),
-				Vertex(Vector3(3.0f, -3.0f, -2.0f), WHITE, Vector2(1.0f, 1.0f)),
-			},
-			{
-#ifdef TRIANGLE_LIST
-				3, 0, 1,
-				1, 4, 3,
-				4, 1, 2,
-				2, 5, 4,
-				6, 3, 4,
-				4, 7, 6,
-				7, 4, 5,
-				5, 8, 7
-#else
-				3, 0, 4, 1, 5, 2,
-				2, 6,
-				6, 3, 7, 4, 8, 5
-#endif
-			},
-#ifdef TRIANGLE_LIST
+			{},
+			{},
 			Mesh::PrimitiveTopology::TriangleList
-#else
-			Mesh::PrimitiveTopology::TriangleStrip
-#endif
 		}
 	},
 
-	m_Texture{ "Resources/uv_grid_2.png" }
+	m_Texture{ "Resources/tuktuk.png" }
 {
 	SDL_GetWindowSize(pWindow, &m_Width, &m_Height);
 	m_AspectRatio = static_cast<float>(m_Width) / m_Height;
@@ -68,6 +32,8 @@ Renderer::Renderer(SDL_Window* pWindow) :
 	m_pBackBuffer = SDL_CreateRGBSurface(NULL, m_Width, m_Height, 32, NULL, NULL, NULL, NULL);
 	m_pBackBufferPixels = static_cast<uint32_t*>(m_pBackBuffer->pixels);
 	m_pDepthBufferPixels = new float[m_Width * m_Height];
+
+	ParseOBJ("Resources/tuktuk.obj", m_vWorldMeshes[0].vVertices, m_vWorldMeshes[0].vIndices);
 }
 
 Renderer::~Renderer()
@@ -169,9 +135,10 @@ void Renderer::Render()
 						continue;
 
 					const float
-						v0WeightDepthRatio{ v0Weight / v0Position.z },
-						v1WeightDepthRatio{ v1Weight / v1Position.z },
-						v2WeightDepthRatio{ v2Weight / v2Position.z },
+						totalAreaInversed{ 1.0f / (v0Weight + v1Weight + v2Weight) },
+						v0WeightDepthRatio{ v0Weight / v0Position.z * totalAreaInversed },
+						v1WeightDepthRatio{ v1Weight / v1Position.z * totalAreaInversed },
+						v2WeightDepthRatio{ v2Weight / v2Position.z * totalAreaInversed },
 
 						interpolatedPixelDepth{ 1.0f / (v0WeightDepthRatio + v1WeightDepthRatio + v2WeightDepthRatio) };
 
