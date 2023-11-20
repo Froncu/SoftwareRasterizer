@@ -4,9 +4,6 @@
     <ClInclude Include="Mathematics.hpp">
       <Filter>Mathematics</Filter>
     </ClInclude>
-    <ClInclude Include="Utilities.hpp">
-      <Filter>Mathematics</Filter>
-    </ClInclude>
     <ClInclude Include="Camera.h">
       <Filter>Miscellaneous\Camera</Filter>
     </ClInclude>
@@ -34,8 +31,11 @@
     <ClInclude Include="Matrix.h">
       <Filter>Mathematics\Matrix</Filter>
     </ClInclude>
-    <ClInclude Include="DataTypes.hpp">
-      <Filter>Mathematics</Filter>
+    <ClInclude Include="Mesh.h">
+      <Filter>Objects\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="Vertex.hpp">
+      <Filter>Objects</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -66,6 +66,9 @@
     </ClCompile>
     <ClCompile Include="Matrix.cpp">
       <Filter>Mathematics\Matrix</Filter>
+    </ClCompile>
+    <ClCompile Include="Mesh.cpp">
+      <Filter>Objects\Mesh</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -107,6 +110,9 @@
     </Filter>
     <Filter Include="Mathematics\Matrix">
       <UniqueIdentifier>{3fe458be-b8d9-4a31-b102-e4702d2131be}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Objects\Mesh">
+      <UniqueIdentifier>{49e590f7-ee9a-4977-91da-45de37ceefd6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

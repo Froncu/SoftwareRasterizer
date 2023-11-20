@@ -5,7 +5,8 @@
 #include "SDL.h"
 #include "Vector2.h"
 
-//#define MULTI_THREAD
+//#define MULTI_THREAD_TRIANGLES
+//#define MULTI_THREAD_PIXELS
 
 #pragma region Constructors/Destructor
 Renderer::Renderer(SDL_Window* pWindow) :
@@ -66,17 +67,17 @@ void Renderer::Render()
 		const bool triangleStrip{ meshWorld.GetPrimitiveTopology() == Mesh::PrimitiveTopology::TriangleStrip };
 
 		const std::vector<uint32_t>& vIndices{ meshWorld.GetIndices() };
-#ifdef MULTI_THREAD
+#ifdef MULTI_THREAD_TRIANGLES
 		std::for_each(std::execution::par, vIndices.begin(), vIndices.end(), [this, triangleStrip, &vIndices, &vVerticesScreen, &meshWorld](uint32_t value)
 		{
-			const size_t index
-			{
-				static_cast<size_t>(std::find(vIndices.begin(), vIndices.end(), value) - vIndices.begin()) *
-				(triangleStrip ? 1 : 3)
-			};
+				const size_t index
+				{
+					static_cast<size_t>(std::find(vIndices.begin(), vIndices.end(), value) - vIndices.begin()) *
+					(triangleStrip ? 1 : 3)
+				};
 
-			if (index >= vIndices.size() - 2)
-				return;
+				if (index >= vIndices.size() - 2)
+					return;
 #else
 		for (size_t index{}; index < vIndices.size() - 2; index += triangleStrip ? 1 : 3)
 		{
@@ -101,7 +102,18 @@ void Renderer::Render()
 				smallestBBX{ static_cast<int>(std::max(0.0f, std::min(v0Position.x, std::min(v1Position.x, v2Position.x)))) },
 				smallestBBY{ static_cast<int>(std::max(0.0f, std::min(v0Position.y, std::min(v1Position.y, v2Position.y)))) };
 
+#ifdef MULTI_THREAD_PIXELS
+			std::vector<float> vPixelsY{};
 			for (float py{ smallestBBY + 0.5f }; py < largestBBY; ++py)
+				vPixelsY.push_back(py);
+
+			std::for_each(std::execution::par, vPixelsY.begin(), vPixelsY.end(),
+				[this, &smallestBBX, &largestBBX, &v0, &v1, &v2, &v0Position, &v1Position, &v2Position, &meshWorld]
+				(float py)
+			{
+#else
+			for (float py{ smallestBBY + 0.5f }; py < largestBBY; ++py)
+#endif
 				for (float px{ smallestBBX + 0.5f }; px < largestBBX; ++px)
 				{
 					const Vector2 pixelScreenPosition{ px, py };
@@ -165,8 +177,11 @@ void Renderer::Render()
 						static_cast<uint8_t>(finalColor.green * 255),
 						static_cast<uint8_t>(finalColor.blue * 255));
 				}
+#ifdef MULTI_THREAD_PIXELS
+			});
+#endif
 
-#ifdef MULTI_THREAD
+#ifdef MULTI_THREAD_TRIANGLES
 		});
 #else
 		}
