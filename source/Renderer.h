@@ -2,9 +2,8 @@
 
 #include <vector>
 
-#include "DataTypes.hpp"
 #include "Camera.h"
-#include "Texture.h"
+#include "Mesh.h"
 
 struct SDL_Window;
 struct SDL_Surface;
@@ -44,6 +43,4 @@ private:
 	float m_AspectRatio;
 
 	std::vector<Mesh> m_vWorldMeshes;
-
-	const Texture m_Texture;
 };

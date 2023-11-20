@@ -1,8 +1,8 @@
 #include <execution>
+#include <algorithm>
 
 #include "Renderer.h"
 #include "SDL.h"
-#include "Utilities.hpp"
 #include "Vector2.h"
 
 //#define MULTI_THREAD
@@ -13,18 +13,12 @@ Renderer::Renderer(SDL_Window* pWindow) :
 
 	m_pFrontBuffer{ SDL_GetWindowSurface(pWindow) },
 
-	m_Camera{ Vector3(0.0f, 0.0f, -10.0f), TO_RADIANS * 60.0f },
+	m_Camera{ Vector3(0.0f, 5.0f, -20.0f), TO_RADIANS * 60.0f },
 
 	m_vWorldMeshes
 	{
-		{
-			{},
-			{},
-			Mesh::PrimitiveTopology::TriangleList
-		}
-	},
-
-	m_Texture{ "Resources/tuktuk.png" }
+		Mesh("Resources/tuktuk.obj", "Resources/tuktuk.png")
+	}
 {
 	SDL_GetWindowSize(pWindow, &m_Width, &m_Height);
 	m_AspectRatio = static_cast<float>(m_Width) / m_Height;
@@ -32,8 +26,6 @@ Renderer::Renderer(SDL_Window* pWindow) :
 	m_pBackBuffer = SDL_CreateRGBSurface(NULL, m_Width, m_Height, 32, NULL, NULL, NULL, NULL);
 	m_pBackBufferPixels = static_cast<uint32_t*>(m_pBackBuffer->pixels);
 	m_pDepthBufferPixels = new float[m_Width * m_Height];
-
-	ParseOBJ("Resources/tuktuk.obj", m_vWorldMeshes[0].vVertices, m_vWorldMeshes[0].vIndices);
 }
 
 Renderer::~Renderer()
@@ -69,19 +61,32 @@ void Renderer::Render()
 	for (const Mesh& meshWorld : m_vWorldMeshes)
 	{
 		std::vector<Vertex> vVerticesScreen{};
-		VertexTransformationFunction(meshWorld.vVertices, vVerticesScreen);
+		VertexTransformationFunction(meshWorld.GetVertices(), vVerticesScreen);
 
-		const bool RAMEfficientIndicesFormat{ meshWorld.primitiveTopology == Mesh::PrimitiveTopology::TriangleStrip };
+		const bool triangleStrip{ meshWorld.GetPrimitiveTopology() == Mesh::PrimitiveTopology::TriangleStrip };
 
-		const std::vector<uint32_t> vIndices{ meshWorld.vIndices };
-		for (size_t index{}; index < vIndices.size() - 2; index += RAMEfficientIndicesFormat ? 1 : 3)
+		const std::vector<uint32_t>& vIndices{ meshWorld.GetIndices() };
+#ifdef MULTI_THREAD
+		std::for_each(std::execution::par, vIndices.begin(), vIndices.end(), [this, triangleStrip, &vIndices, &vVerticesScreen, &meshWorld](uint32_t value)
 		{
+			const size_t index
+			{
+				static_cast<size_t>(std::find(vIndices.begin(), vIndices.end(), value) - vIndices.begin()) *
+				(triangleStrip ? 1 : 3)
+			};
+
+			if (index >= vIndices.size() - 2)
+				return;
+#else
+		for (size_t index{}; index < vIndices.size() - 2; index += triangleStrip ? 1 : 3)
+		{
+#endif
 			const bool isIndexEven{ !(index % 2) };
 
 			const Vertex
 				& v0{ vVerticesScreen[vIndices[index]] },
-				& v1{ vVerticesScreen[vIndices[index + (!RAMEfficientIndicesFormat ? 1 : isIndexEven ? 1 : 2)]] },
-				& v2{ vVerticesScreen[vIndices[index + (!RAMEfficientIndicesFormat ? 2 : isIndexEven ? 2 : 1)]] };
+				& v1{ vVerticesScreen[vIndices[index + (!triangleStrip ? 1 : isIndexEven ? 1 : 2)]] },
+				& v2{ vVerticesScreen[vIndices[index + (!triangleStrip ? 2 : isIndexEven ? 2 : 1)]] };
 
 			const Vector3
 				& v0Position{ v0.position },
@@ -96,18 +101,7 @@ void Renderer::Render()
 				smallestBBX{ static_cast<int>(std::max(0.0f, std::min(v0Position.x, std::min(v1Position.x, v2Position.x)))) },
 				smallestBBY{ static_cast<int>(std::max(0.0f, std::min(v0Position.y, std::min(v1Position.y, v2Position.y)))) };
 
-#ifdef MULTI_THREAD
-			std::vector<float> vPixelsY{};
 			for (float py{ smallestBBY + 0.5f }; py < largestBBY; ++py)
-				vPixelsY.push_back(py);
-
-			std::for_each(std::execution::par, vPixelsY.begin(), vPixelsY.end(),
-				[this, &v0, &v1, &v2, &v0Position, &v1Position, &v2Position, largestBBX, largestBBY, smallestBBX, smallestBBY]
-				(float py)
-				{
-#else
-			for (float py{ smallestBBY + 0.5f }; py < largestBBY; ++py)
-#endif
 				for (float px{ smallestBBX + 0.5f }; px < largestBBX; ++px)
 				{
 					const Vector2 pixelScreenPosition{ px, py };
@@ -156,7 +150,7 @@ void Renderer::Render()
 
 					const ColorRGB finalColor
 					{
-						m_Texture.Sample
+						meshWorld.GetDiffuse().Sample
 						(
 							Vector2
 							(
@@ -171,10 +165,12 @@ void Renderer::Render()
 						static_cast<uint8_t>(finalColor.green * 255),
 						static_cast<uint8_t>(finalColor.blue * 255));
 				}
+
 #ifdef MULTI_THREAD
-				});
-#endif
+		});
+#else
 		}
+#endif
 	}
 
 	SDL_UnlockSurface(m_pBackBuffer);

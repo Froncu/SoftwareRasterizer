@@ -1,5 +1,7 @@
 #include "Texture.h"
 
+#include <cmath>
+
 #include "SDL.h"
 #include "SDL_Image.h"
 #include "Vector2.h"
@@ -7,9 +9,26 @@
 
 #pragma region Constructors/Destructor
 Texture::Texture(const std::string& path) :
-	m_pSurface{ IMG_Load(path.c_str()) },
+	m_Path{ path },
+	m_pSurface{ IMG_Load(m_Path.c_str()) },
 	m_pSurfacePixels{ static_cast<uint32_t*>(m_pSurface->pixels) }
 {
+}
+
+Texture::Texture(const Texture& other) :
+	m_Path{ other.m_Path },
+	m_pSurface{ IMG_Load(m_Path.c_str()) },
+	m_pSurfacePixels{ static_cast<uint32_t*>(m_pSurface->pixels) }
+{
+}
+
+Texture::Texture(Texture&& other) noexcept :
+	m_Path{ other.m_Path },
+	m_pSurface{ other.m_pSurface },
+	m_pSurfacePixels{ other.m_pSurfacePixels }
+{
+	other.m_pSurface = nullptr;
+	other.m_pSurfacePixels = nullptr;
 }
 
 Texture::~Texture()
@@ -20,16 +39,58 @@ Texture::~Texture()
 
 
 
+#pragma region Operators
+Texture& Texture::operator=(const Texture& other)
+{
+	SDL_FreeSurface(m_pSurface);
+
+	m_Path = other.m_Path;
+	m_pSurface = IMG_Load(m_Path.c_str());
+	m_pSurfacePixels = static_cast<uint32_t*>(m_pSurface->pixels);
+
+	return *this;
+}
+
+Texture& Texture::operator=(Texture&& other) noexcept
+{
+	SDL_FreeSurface(m_pSurface);
+
+	m_Path = other.m_Path;
+	m_pSurface = other.m_pSurface;
+	m_pSurfacePixels = other.m_pSurfacePixels;
+
+	other.m_pSurface = nullptr;
+	other.m_pSurfacePixels = nullptr;
+
+	return *this;
+}
+#pragma endregion
+
+
+
 #pragma region Public Methods
 ColorRGB Texture::Sample(const Vector2& UVValue) const
 {
-	if (UVValue.x < 0.0f || UVValue.x > 1.0f || UVValue.y < 0.0f || UVValue.y > 1.0f)
-		return ColorRGB{ GRAY };
+	float 
+		u{ UVValue.x },
+		v{ UVValue.y };
+
+	while (u > 1.0f)
+		u -= 1.0f;
+
+	while (u < 0.0f)
+		u += 1.0f;
+
+	while (v > 1.0f)
+		v -= 1.0f;
+
+	while (v < 0.0f)
+		v += 1.0f;
 
 	const int
 		surfaceWidth{ m_pSurface->w },
-		pixelIndexX{ static_cast<int>((surfaceWidth - 1) * UVValue.x) },
-		pixelIndexY{ static_cast<int>((m_pSurface->h - 1) * UVValue.y) };
+		pixelIndexX{ static_cast<int>((surfaceWidth - 1) * u) },
+		pixelIndexY{ static_cast<int>((m_pSurface->h - 1) * v) };
 
 	Uint8
 		red,
