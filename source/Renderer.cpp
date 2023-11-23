@@ -18,6 +18,7 @@ Renderer::Renderer(SDL_Window* pWindow) :
 
 	m_vWorldMeshes
 	{
+		Mesh("Resources/tuktuk.obj", "Resources/tuktuk.png"),
 		Mesh("Resources/tuktuk.obj", "Resources/tuktuk.png")
 	}
 {
@@ -27,6 +28,12 @@ Renderer::Renderer(SDL_Window* pWindow) :
 	m_pBackBuffer = SDL_CreateRGBSurface(NULL, m_Width, m_Height, 32, NULL, NULL, NULL, NULL);
 	m_pBackBufferPixels = static_cast<uint32_t*>(m_pBackBuffer->pixels);
 	m_pDepthBufferPixels = new float[m_Width * m_Height];
+
+	m_vWorldMeshes[0].SetTranslator(Vector3(10.0f, 0.0f, 0.0f));
+	m_vWorldMeshes[0].ApplyTransforms();
+
+	m_vWorldMeshes[1].SetTranslator(Vector3(-10.0f, 0.0f, 0.0f));
+	m_vWorldMeshes[1].ApplyTransforms();
 }
 
 Renderer::~Renderer()
@@ -41,6 +48,12 @@ Renderer::~Renderer()
 void Renderer::Update(const Timer& timer)
 {
 	m_Camera.Update(timer);
+
+	for (Mesh& mesh : m_vWorldMeshes)
+	{
+		mesh.SetRotorY(timer.GetTotal());
+		mesh.ApplyTransforms();
+	}
 }
 
 void Renderer::Render()
@@ -62,13 +75,14 @@ void Renderer::Render()
 	for (const Mesh& meshWorld : m_vWorldMeshes)
 	{
 		std::vector<Vertex> vVerticesScreen{};
-		VertexTransformationFunction(meshWorld.GetVertices(), vVerticesScreen);
+		VertexTransformationFunction(meshWorld.GetVerticesTransformed(), vVerticesScreen);
 
 		const bool triangleStrip{ meshWorld.GetPrimitiveTopology() == Mesh::PrimitiveTopology::TriangleStrip };
 
 		const std::vector<uint32_t>& vIndices{ meshWorld.GetIndices() };
 #ifdef MULTI_THREAD_TRIANGLES
-		std::for_each(std::execution::par, vIndices.begin(), vIndices.end(), [this, triangleStrip, &vIndices, &vVerticesScreen, &meshWorld](uint32_t value)
+		std::for_each(std::execution::par, vIndices.begin(), vIndices.end(), [this, triangleStrip, &vIndices, &vVerticesScreen, &meshWorld]
+		(uint32_t value)
 		{
 				const size_t index
 				{
@@ -162,7 +176,7 @@ void Renderer::Render()
 
 					const ColorRGB finalColor
 					{
-						meshWorld.GetDiffuse().Sample
+						meshWorld.GetColorTexture().Sample
 						(
 							Vector2
 							(

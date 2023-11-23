@@ -5,13 +5,19 @@
 #pragma region Constructors/Destructor
 Mesh::Mesh(const std::string& OBJFilePath, const std::string& diffusePath, bool flipAxisAndWinding) :
 	m_vVertices{},
+	m_vVerticesTranformed{},
+
 	m_vIndices{},
 	m_PrimitiveTopology{ PrimitiveTopology::TriangleList },
 
 	m_vVerticesOut{},
-	m_WorldMatrix{},
 
-	m_Diffuse{ diffusePath }
+	m_Translator{ IDENTITY },
+	m_Rotor{ IDENTITY },
+	m_Scalar{ IDENTITY },
+	m_WorldMatrix{ IDENTITY },
+
+	m_ColorTexture{ diffusePath }
 {
 	ParseOBJ(OBJFilePath, flipAxisAndWinding);
 }
@@ -20,9 +26,34 @@ Mesh::Mesh(const std::string& OBJFilePath, const std::string& diffusePath, bool 
 
 
 #pragma region Public Methods
-const std::vector<Vertex>& Mesh::GetVertices() const
+void Mesh::ApplyTransforms()
 {
-	return m_vVertices;
+	const size_t verticesSize{ m_vVertices.size() };
+	for (size_t index{}; index < verticesSize; ++index)
+		m_vVerticesTranformed[index].position = m_WorldMatrix.TransformPoint(m_vVertices[index].position);
+}
+
+void Mesh::SetTranslator(const Vector3& translator)
+{
+	m_Translator = Matrix::CreateTranslator(translator);
+	m_WorldMatrix = m_Scalar * m_Rotor * m_Translator;
+}
+
+void Mesh::SetRotorY(float yaw)
+{
+	m_Rotor = Matrix::CreateRotorY(yaw);
+	m_WorldMatrix = m_Scalar * m_Rotor * m_Translator;
+}
+
+void Mesh::SetScalar(float scalar)
+{
+	m_Scalar = Matrix::CreateScalar(scalar);
+	m_WorldMatrix = m_Scalar * m_Rotor * m_Translator;
+}
+
+const std::vector<Vertex>& Mesh::GetVerticesTransformed() const
+{
+	return m_vVerticesTranformed;
 }
 
 const std::vector<uint32_t>& Mesh::GetIndices() const
@@ -35,9 +66,9 @@ Mesh::PrimitiveTopology Mesh::GetPrimitiveTopology() const
 	return m_PrimitiveTopology;
 }
 
-const Texture& Mesh::GetDiffuse() const
+const Texture& Mesh::GetColorTexture() const
 {
-	return m_Diffuse;
+	return m_ColorTexture;
 }
 #pragma endregion
 
@@ -190,6 +221,7 @@ bool Mesh::ParseOBJ(const std::string& path, bool flipAxisAndWinding)
 		}
 	}
 
+	m_vVerticesTranformed = m_vVertices;
 	return true;
 }
 #pragma endregion
