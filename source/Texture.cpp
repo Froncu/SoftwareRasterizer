@@ -71,26 +71,10 @@ Texture& Texture::operator=(Texture&& other) noexcept
 #pragma region Public Methods
 ColorRGB Texture::Sample(const Vector2& UVValue) const
 {
-	float 
-		u{ UVValue.x },
-		v{ UVValue.y };
-
-	while (u > 1.0f)
-		u -= 1.0f;
-
-	while (u < 0.0f)
-		u += 1.0f;
-
-	while (v > 1.0f)
-		v -= 1.0f;
-
-	while (v < 0.0f)
-		v += 1.0f;
-
 	const int
 		surfaceWidth{ m_pSurface->w },
-		pixelIndexX{ static_cast<int>((surfaceWidth - 1) * u) },
-		pixelIndexY{ static_cast<int>((m_pSurface->h - 1) * v) };
+		pixelIndexX{ static_cast<int>((surfaceWidth - 1) * UVValue.x) },
+		pixelIndexY{ static_cast<int>((m_pSurface->h - 1) * UVValue.y) };
 
 	Uint8
 		red,

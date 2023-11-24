@@ -37,6 +37,7 @@
     <ClInclude Include="Vertex.hpp">
       <Filter>Objects</Filter>
     </ClInclude>
+    <ClInclude Include="Constants.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

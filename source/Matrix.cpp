@@ -198,7 +198,7 @@ Vector4 Matrix::TransformPoint(float x, float y, float z, float w) const
 		m_Data[0].x * x + m_Data[1].x * y + m_Data[2].x * z + m_Data[3].x,
 		m_Data[0].y * x + m_Data[1].y * y + m_Data[2].y * z + m_Data[3].y,
 		m_Data[0].z * x + m_Data[1].z * y + m_Data[2].z * z + m_Data[3].z,
-		m_Data[0].w * w + m_Data[1].w * w + m_Data[2].w * w + m_Data[3].w
+		m_Data[0].w * x + m_Data[1].w * y + m_Data[2].w * z + m_Data[3].w
 	);
 }
 

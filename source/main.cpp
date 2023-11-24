@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "vld.h"
+#include "Constants.hpp"
 #include "SDL.h"
 #include "Timer.h"
 #include "Renderer.h"
@@ -11,15 +12,12 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* args[])
 	SDL_Init(SDL_INIT_VIDEO);
 
 	const std::string windowTitle{ "Rasterizer - Fratczak Jakub" };
-	const uint32_t
-		width{ 640 },
-		height{ 480 };
 
 	SDL_Window* pWindow = SDL_CreateWindow(
 		windowTitle.c_str(),
 		SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
-		width, height, NULL);
+		WINDOW_WIDTH, WINDOW_HEIGHT, NULL);
 
 	if (!pWindow)
 		return 1;

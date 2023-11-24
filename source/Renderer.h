@@ -28,19 +28,17 @@ public:
 	Camera m_Camera;
 
 private:
-	void VertexTransformationFunction(const std::vector<Vertex>& vVerticesIn, std::vector<Vertex>& vVerticesOut) const;
+	void VertexTransformationFunction(std::vector<Mesh>& vMeshes) const;
 
 	SDL_Window* m_pWindow;
 
-	SDL_Surface* m_pFrontBuffer, * m_pBackBuffer;
+	SDL_Surface
+		* m_pFrontBuffer, 
+		* m_pBackBuffer;
 
 	uint32_t* m_pBackBufferPixels;
 
 	float* m_pDepthBufferPixels;
 
-	int m_Width, m_Height;
-
-	float m_AspectRatio;
-
-	std::vector<Mesh> m_vWorldMeshes;
+	std::vector<Mesh> m_vMeshes;
 };

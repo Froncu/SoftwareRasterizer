@@ -5,12 +5,10 @@
 #pragma region Constructors/Destructor
 Mesh::Mesh(const std::string& OBJFilePath, const std::string& diffusePath, bool flipAxisAndWinding) :
 	m_vVertices{},
-	m_vVerticesTranformed{},
+	m_vVerticesOut{},
 
 	m_vIndices{},
 	m_PrimitiveTopology{ PrimitiveTopology::TriangleList },
-
-	m_vVerticesOut{},
 
 	m_Translator{ IDENTITY },
 	m_Rotor{ IDENTITY },
@@ -26,13 +24,6 @@ Mesh::Mesh(const std::string& OBJFilePath, const std::string& diffusePath, bool 
 
 
 #pragma region Public Methods
-void Mesh::ApplyTransforms()
-{
-	const size_t verticesSize{ m_vVertices.size() };
-	for (size_t index{}; index < verticesSize; ++index)
-		m_vVerticesTranformed[index].position = m_WorldMatrix.TransformPoint(m_vVertices[index].position);
-}
-
 void Mesh::SetTranslator(const Vector3& translator)
 {
 	m_Translator = Matrix::CreateTranslator(translator);
@@ -51,9 +42,9 @@ void Mesh::SetScalar(float scalar)
 	m_WorldMatrix = m_Scalar * m_Rotor * m_Translator;
 }
 
-const std::vector<Vertex>& Mesh::GetVerticesTransformed() const
+const std::vector<Vertex>& Mesh::GetVertices() const
 {
-	return m_vVerticesTranformed;
+	return m_vVertices;
 }
 
 const std::vector<uint32_t>& Mesh::GetIndices() const
@@ -64,6 +55,11 @@ const std::vector<uint32_t>& Mesh::GetIndices() const
 Mesh::PrimitiveTopology Mesh::GetPrimitiveTopology() const
 {
 	return m_PrimitiveTopology;
+}
+
+const Matrix& Mesh::GetWorldMatrix() const
+{
+	return m_WorldMatrix;
 }
 
 const Texture& Mesh::GetColorTexture() const
@@ -221,7 +217,8 @@ bool Mesh::ParseOBJ(const std::string& path, bool flipAxisAndWinding)
 		}
 	}
 
-	m_vVerticesTranformed = m_vVertices;
+	m_vVerticesOut.resize(m_vVertices.size());
+
 	return true;
 }
 #pragma endregion

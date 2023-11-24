@@ -20,8 +20,9 @@ struct VertexOut
 {
 	Vector4 position;
 	ColorRGB color;
-	//Vector2 UVValue{};
-	//Vector3 normal{};
-	//Vector3 tangent{};
-	//Vector3 viewDirection{};
+	Vector2 UVValue;
+	Vector3
+		normal,
+		tangent,
+		viewDirection;
 };

@@ -1,6 +1,7 @@
 #include <execution>
 #include <algorithm>
 
+#include "Constants.hpp"
 #include "Renderer.h"
 #include "SDL.h"
 #include "Vector2.h"
@@ -13,27 +14,19 @@ Renderer::Renderer(SDL_Window* pWindow) :
 	m_pWindow{ pWindow },
 
 	m_pFrontBuffer{ SDL_GetWindowSurface(pWindow) },
+	m_pBackBuffer{ SDL_CreateRGBSurface(NULL, WINDOW_WIDTH, WINDOW_HEIGHT, 32, NULL, NULL, NULL, NULL) },
+
+	m_pBackBufferPixels{ static_cast<uint32_t*>(m_pBackBuffer->pixels) },
+
+	m_pDepthBufferPixels{ new float[WINDOW_WIDTH * WINDOW_HEIGHT] },
 
 	m_Camera{ Vector3(0.0f, 5.0f, -20.0f), TO_RADIANS * 60.0f },
 
-	m_vWorldMeshes
+	m_vMeshes
 	{
 		Mesh("Resources/tuktuk.obj", "Resources/tuktuk.png"),
-		Mesh("Resources/tuktuk.obj", "Resources/tuktuk.png")
 	}
 {
-	SDL_GetWindowSize(pWindow, &m_Width, &m_Height);
-	m_AspectRatio = static_cast<float>(m_Width) / m_Height;
-
-	m_pBackBuffer = SDL_CreateRGBSurface(NULL, m_Width, m_Height, 32, NULL, NULL, NULL, NULL);
-	m_pBackBufferPixels = static_cast<uint32_t*>(m_pBackBuffer->pixels);
-	m_pDepthBufferPixels = new float[m_Width * m_Height];
-
-	m_vWorldMeshes[0].SetTranslator(Vector3(10.0f, 0.0f, 0.0f));
-	m_vWorldMeshes[0].ApplyTransforms();
-
-	m_vWorldMeshes[1].SetTranslator(Vector3(-10.0f, 0.0f, 0.0f));
-	m_vWorldMeshes[1].ApplyTransforms();
 }
 
 Renderer::~Renderer()
@@ -49,11 +42,8 @@ void Renderer::Update(const Timer& timer)
 {
 	m_Camera.Update(timer);
 
-	for (Mesh& mesh : m_vWorldMeshes)
-	{
+	for (Mesh& mesh : m_vMeshes)
 		mesh.SetRotorY(timer.GetTotal());
-		mesh.ApplyTransforms();
-	}
 }
 
 void Renderer::Render()
@@ -69,48 +59,70 @@ void Renderer::Render()
 		static_cast<uint8_t>(spaceColor.blue * 255))
 	};
 
-	std::fill_n(m_pBackBufferPixels, m_Width * m_Height, spaceColorMapped);
-	std::fill_n(m_pDepthBufferPixels, m_Width * m_Height, INFINITY);
+	std::fill_n(m_pBackBufferPixels, WINDOW_PIXEL_COUNT, spaceColorMapped);
+	std::fill_n(m_pDepthBufferPixels, WINDOW_PIXEL_COUNT, INFINITY);
 
-	for (const Mesh& meshWorld : m_vWorldMeshes)
+	VertexTransformationFunction(m_vMeshes);
+
+	for (const Mesh& mesh : m_vMeshes)
 	{
-		std::vector<Vertex> vVerticesScreen{};
-		VertexTransformationFunction(meshWorld.GetVerticesTransformed(), vVerticesScreen);
+		const bool triangleStrip{ mesh.GetPrimitiveTopology() == Mesh::PrimitiveTopology::TriangleStrip };
 
-		const bool triangleStrip{ meshWorld.GetPrimitiveTopology() == Mesh::PrimitiveTopology::TriangleStrip };
+		const std::vector<uint32_t> vIndicesScreen{ mesh.GetIndices() };
+		std::vector<VertexOut> vVerticesScreen{ mesh.m_vVerticesOut };
 
-		const std::vector<uint32_t>& vIndices{ meshWorld.GetIndices() };
 #ifdef MULTI_THREAD_TRIANGLES
-		std::for_each(std::execution::par, vIndices.begin(), vIndices.end(), [this, triangleStrip, &vIndices, &vVerticesScreen, &meshWorld]
+		std::for_each(std::execution::par, vIndicesScreen.begin(), vIndicesScreen.end(), [this, triangleStrip, &vIndicesScreen, &vVerticesScreen, &meshWorld]
 		(uint32_t value)
-		{
+			{
 				const size_t index
 				{
-					static_cast<size_t>(std::find(vIndices.begin(), vIndices.end(), value) - vIndices.begin()) *
+					static_cast<size_t>(std::find(vIndicesScreen.begin(), vIndicesScreen.end(), value) - vIndicesScreen.begin()) *
 					(triangleStrip ? 1 : 3)
 				};
 
-				if (index >= vIndices.size() - 2)
+				if (index >= vIndicesScreen.size() - 2)
 					return;
 #else
-		for (size_t index{}; index < vIndices.size() - 2; index += triangleStrip ? 1 : 3)
+		for (size_t index{}; index < vIndicesScreen.size() - 2; index += triangleStrip ? 1 : 3)
 		{
 #endif
 			const bool isIndexEven{ !(index % 2) };
 
-			const Vertex
-				& v0{ vVerticesScreen[vIndices[index]] },
-				& v1{ vVerticesScreen[vIndices[index + (!triangleStrip ? 1 : isIndexEven ? 1 : 2)]] },
-				& v2{ vVerticesScreen[vIndices[index + (!triangleStrip ? 2 : isIndexEven ? 2 : 1)]] };
+			VertexOut
+				& v0{ vVerticesScreen[vIndicesScreen[index]] },
+				& v1{ vVerticesScreen[vIndicesScreen[index + (!triangleStrip ? 1 : isIndexEven ? 1 : 2)]] },
+				& v2{ vVerticesScreen[vIndicesScreen[index + (!triangleStrip ? 2 : isIndexEven ? 2 : 1)]] };
 
-			const Vector3
+			Vector4
 				& v0Position{ v0.position },
 				& v1Position{ v1.position },
 				& v2Position{ v2.position };
 
+			if (v0Position.x < -1.0f || v0Position.x > 1.0f || v0Position.y < -1.0f || v0Position.y > 1.0f || v0Position.z < 0.0f || v0Position.z > 1.0f)
+				continue;
+
+			if (v1Position.x < -1.0f || v1Position.x > 1.0f || v1Position.y < -1.0f || v1Position.y > 1.0f || v1Position.z < 0.0f || v1Position.z > 1.0f)
+				continue;
+
+			if (v2Position.x < -1.0f || v2Position.x > 1.0f || v2Position.y < -1.0f || v2Position.y > 1.0f || v2Position.z < 0.0f || v2Position.z > 1.0f)
+				continue;
+
+			++v0Position.x *= 0.5f * WINDOW_WIDTH;
+			v0Position.y = 1.0f - v0Position.y;
+			v0Position.y *= 0.5f * WINDOW_HEIGHT;
+
+			++v1Position.x *= 0.5f * WINDOW_WIDTH;
+			v1Position.y = 1.0f - v1Position.y;
+			v1Position.y *= 0.5f * WINDOW_HEIGHT;
+
+			++v2Position.x *= 0.5f * WINDOW_WIDTH;
+			v2Position.y = 1.0f - v2Position.y;
+			v2Position.y *= 0.5f * WINDOW_HEIGHT;
+
 			const float
-				largestBBX{ std::min(static_cast<float>(m_Width), std::max(v0Position.x, std::max(v1Position.x, v2Position.x))) },
-				largestBBY{ std::min(static_cast<float>(m_Height), std::max(v0Position.y, std::max(v1Position.y, v2Position.y))) };
+				largestBBX{ std::min(static_cast<float>(WINDOW_WIDTH), std::max(v0Position.x, std::max(v1Position.x, v2Position.x))) },
+				largestBBY{ std::min(static_cast<float>(WINDOW_HEIGHT), std::max(v0Position.y, std::max(v1Position.y, v2Position.y))) };
 
 			const int
 				smallestBBX{ static_cast<int>(std::max(0.0f, std::min(v0Position.x, std::min(v1Position.x, v2Position.x)))) },
@@ -124,7 +136,7 @@ void Renderer::Render()
 			std::for_each(std::execution::par, vPixelsY.begin(), vPixelsY.end(),
 				[this, &smallestBBX, &largestBBX, &v0, &v1, &v2, &v0Position, &v1Position, &v2Position, &meshWorld]
 				(float py)
-			{
+				{
 #else
 			for (float py{ smallestBBY + 0.5f }; py < largestBBY; ++py)
 #endif
@@ -156,13 +168,13 @@ void Renderer::Render()
 
 					const float
 						totalAreaInversed{ 1.0f / (v0Weight + v1Weight + v2Weight) },
-						v0WeightDepthRatio{ v0Weight / v0Position.z * totalAreaInversed },
-						v1WeightDepthRatio{ v1Weight / v1Position.z * totalAreaInversed },
-						v2WeightDepthRatio{ v2Weight / v2Position.z * totalAreaInversed },
+						v0WeightDepthRatio{ v0Weight / v0Position.w * totalAreaInversed },
+						v1WeightDepthRatio{ v1Weight / v1Position.w * totalAreaInversed },
+						v2WeightDepthRatio{ v2Weight / v2Position.w * totalAreaInversed },
 
 						interpolatedPixelDepth{ 1.0f / (v0WeightDepthRatio + v1WeightDepthRatio + v2WeightDepthRatio) };
 
-					const int pixelIndex{ static_cast<int>(px) + (static_cast<int>(py) * m_Width) };
+					const uint32_t pixelIndex{ static_cast<uint32_t>(px) + (static_cast<uint32_t>(py) * WINDOW_WIDTH) };
 
 					if (interpolatedPixelDepth >= m_pDepthBufferPixels[pixelIndex])
 						continue;
@@ -176,7 +188,7 @@ void Renderer::Render()
 
 					const ColorRGB finalColor
 					{
-						meshWorld.GetColorTexture().Sample
+						mesh.GetColorTexture().Sample
 						(
 							Vector2
 							(
@@ -192,7 +204,7 @@ void Renderer::Render()
 						static_cast<uint8_t>(finalColor.blue * 255));
 				}
 #ifdef MULTI_THREAD_PIXELS
-			});
+				});
 #endif
 
 #ifdef MULTI_THREAD_TRIANGLES
@@ -202,9 +214,9 @@ void Renderer::Render()
 #endif
 	}
 
-	SDL_UnlockSurface(m_pBackBuffer);
-	SDL_BlitSurface(m_pBackBuffer, nullptr, m_pFrontBuffer, nullptr);
-	SDL_UpdateWindowSurface(m_pWindow);
+SDL_UnlockSurface(m_pBackBuffer);
+SDL_BlitSurface(m_pBackBuffer, nullptr, m_pFrontBuffer, nullptr);
+SDL_UpdateWindowSurface(m_pWindow);
 }
 
 bool Renderer::SaveBufferToImage() const
@@ -216,38 +228,35 @@ bool Renderer::SaveBufferToImage() const
 
 
 #pragma region Private Methods
-void Renderer::VertexTransformationFunction(const std::vector<Vertex>& vVerticesIn, std::vector<Vertex>& vVerticesOut) const
+void Renderer::VertexTransformationFunction(std::vector<Mesh>& vMeshes) const
 {
-	const Matrix& viewMatrix{ m_Camera.GetViewMatrix() };
-	const float fieldOfViewValue{ m_Camera.GetFieldOfViewValue() };
-	const int size{ static_cast<int>(vVerticesIn.size()) };
+	const Matrix& cameraMatrix{ m_Camera.GetCameraMatrix() };
 
-	vVerticesOut.resize(size);
-
-	for (int index{}; index < size; ++index)
+	for (Mesh& mesh : vMeshes)
 	{
-		const Vertex& vertexIn{ vVerticesIn[index] };
-		Vertex& vertexOut{ vVerticesOut[index] };
+		const Matrix& worldMatrix{ mesh.GetWorldMatrix() };
 
-		vertexOut.color = vertexIn.color;
-		vertexOut.UVValue = vertexIn.UVValue;
+		const std::vector<Vertex>& vVerticesIn{ mesh.GetVertices() };
+		std::vector<VertexOut>& vVerticesOut{ mesh.m_vVerticesOut };
 
-		Vector3& vertexOutPosition{ vVerticesOut[index].position };
+		for (size_t index{}; index < vVerticesIn.size(); ++index)
+		{
+			const Vertex& vertexIn{ vVerticesIn[index] };
+			VertexOut& vertexOut{ vVerticesOut[index] };
 
-		vertexOutPosition = viewMatrix.TransformPoint(vVerticesIn[index].position);
+			vertexOut.color = vertexIn.color;
+			vertexOut.normal = vertexIn.normal;
+			vertexOut.tangent = vertexIn.tangent;
+			vertexOut.UVValue = vertexIn.UVValue;
+			vertexOut.viewDirection = vertexIn.viewDirection;
 
-		vertexOutPosition.x = vertexOutPosition.x / vertexOutPosition.z;
-		vertexOutPosition.y = vertexOutPosition.y / vertexOutPosition.z;
-
-		vertexOutPosition.x /= m_AspectRatio * fieldOfViewValue;
-		vertexOutPosition.y /= fieldOfViewValue;
-
-		vertexOutPosition = Vector3
-		(
-			(vertexOutPosition.x + 1.0f) * 0.5f * m_Width,
-			(1.0f - vertexOutPosition.y) * 0.5f * m_Height,
-			vertexOutPosition.z
-		);
+			Vector4& vertexOutPosition{ vertexOut.position };
+			vertexOutPosition = worldMatrix.TransformPoint(vertexIn.position.GetPoint4());
+			vertexOutPosition = cameraMatrix.TransformPoint(vertexOutPosition);
+			vertexOutPosition.x /= vertexOutPosition.w;
+			vertexOutPosition.y /= vertexOutPosition.w;
+			vertexOutPosition.z /= vertexOutPosition.w;
+		}
 	}
 }
 #pragma endregion

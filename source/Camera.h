@@ -20,6 +20,8 @@ public:
 	void Update(const Timer& timer);
 
 	const Matrix& GetViewMatrix() const;
+	const Matrix& GetProjectionMatrix() const;
+	const Matrix& GetCameraMatrix() const;
 	const Vector3& GetOrigin() const;
 	float GetFieldOfViewValue() const;
 
@@ -30,6 +32,7 @@ public:
 private:
 	void UpdateViewMatrix();
 	void UpdateProjectionMatrix();
+	void UpdateCameraMatrix();
 
 	Vector3
 		m_Origin,
@@ -44,5 +47,8 @@ private:
 		m_TotalPitch,
 		m_TotalYaw;
 
-	Matrix m_ViewMatrix;
+	Matrix
+		m_ViewMatrix,
+		m_ProjectionMatrix,
+		m_CameraMatrix;
 };

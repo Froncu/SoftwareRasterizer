@@ -1,6 +1,7 @@
 #include "Camera.h"
 #include "SDL_keyboard.h"
 #include "SDL_mouse.h"
+#include "Constants.hpp"
 
 #pragma region Constructors/Destructor
 Camera::Camera(const Vector3& origin, float fieldOfViewAngle) :
@@ -15,7 +16,9 @@ Camera::Camera(const Vector3& origin, float fieldOfViewAngle) :
 	m_TotalPitch{},
 	m_TotalYaw{},
 
-	m_ViewMatrix{}
+	m_ViewMatrix{},
+	m_ProjectionMatrix{},
+	m_CameraMatrix{}
 {
 	UpdateViewMatrix();
 	UpdateProjectionMatrix();
@@ -99,6 +102,16 @@ const Matrix& Camera::GetViewMatrix() const
 	return m_ViewMatrix;
 }
 
+const Matrix& Camera::GetProjectionMatrix() const
+{
+	return m_ProjectionMatrix;
+}
+
+const Matrix& Camera::GetCameraMatrix() const
+{
+	return m_CameraMatrix;
+}
+
 const Vector3& Camera::GetOrigin() const
 {
 	return m_Origin;
@@ -123,6 +136,8 @@ void Camera::SetFieldOfViewAngle(float angle)
 	static const float MAX_FOV_ANGLE{ TO_RADIANS * 180.0f - FLT_EPSILON };
 	m_FieldOfViewAngle = std::max(FLT_EPSILON, std::min(angle, MAX_FOV_ANGLE));
 	m_FieldOfViewValue = tanf(m_FieldOfViewAngle / 2.0f);
+
+	UpdateProjectionMatrix();
 }
 
 void Camera::IncrementFieldOfViewAngle(float angleIncrementer)
@@ -149,15 +164,39 @@ void Camera::UpdateViewMatrix()
 		m_Origin.GetPoint4()
 	).GetInversed();
 
+	UpdateCameraMatrix();
+
 	//ViewMatrix => Matrix::CreateLookAtLH(...) [not implemented yet]
 	//DirectX Implementation => https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dxmatrixlookatlh
 }
 
 void Camera::UpdateProjectionMatrix()
 {
-	//TODO W3
+	static constexpr float
+		NEAR_PLANE{ 0.1f },
+		FAR_PLANE{ 100.0f },
+		DELTA_NEAR_FAR{ FAR_PLANE - NEAR_PLANE };
+
+	static constexpr Vector4
+		Z_AXIS{ 0.0f, 0.0f, FAR_PLANE / DELTA_NEAR_FAR, 1.0f },
+		TRANSLATOR{ 0.0f, 0.0f, -FAR_PLANE * NEAR_PLANE / DELTA_NEAR_FAR, 0.0f };
+
+	m_ProjectionMatrix = Matrix
+	(
+		Vector4(1.0f / (ASPECT_RATIO * m_FieldOfViewValue), 0.0f, 0.0f, 0.0f),
+		Vector4(0.0f, 1.0f / m_FieldOfViewValue, 0.0f, 0.0f),
+		Z_AXIS,
+		TRANSLATOR
+	);
+
+	UpdateCameraMatrix();
 
 	//ProjectionMatrix => Matrix::CreatePerspectiveFovLH(...) [not implemented yet]
 	//DirectX Implementation => https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dxmatrixperspectivefovlh
+}
+
+void Camera::UpdateCameraMatrix()
+{
+	m_CameraMatrix = m_ViewMatrix * m_ProjectionMatrix;
 }
 #pragma endregion
