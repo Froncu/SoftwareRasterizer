@@ -72,21 +72,18 @@ void Renderer::Render()
 		std::vector<VertexOut> vVerticesScreen{ mesh.m_vVerticesOut };
 
 #ifdef MULTI_THREAD_TRIANGLES
-		std::for_each(std::execution::par, vIndicesScreen.begin(), vIndicesScreen.end(), [this, triangleStrip, &vIndicesScreen, &vVerticesScreen, &meshWorld]
-		(uint32_t value)
-			{
-				const size_t index
-				{
-					static_cast<size_t>(std::find(vIndicesScreen.begin(), vIndicesScreen.end(), value) - vIndicesScreen.begin()) *
-					(triangleStrip ? 1 : 3)
-				};
+		std::vector<size_t> vIndices{};
+		vIndices.reserve(vIndicesScreen.size());
+		for (size_t index{}; index <= vIndicesScreen.size() - 2; index += triangleStrip ? 1 : 3)
+			vIndices.push_back(index);
 
-				if (index >= vIndicesScreen.size() - 2)
-					return;
+		std::for_each(std::execution::par, vIndices.begin(), vIndices.end(),
+			[this, triangleStrip, &vIndicesScreen, &vVerticesScreen, &mesh]
+			(size_t index)
 #else
 		for (size_t index{}; index < vIndicesScreen.size() - 2; index += triangleStrip ? 1 : 3)
-		{
 #endif
+		{
 			const bool isIndexEven{ !(index % 2) };
 
 			VertexOut
@@ -100,13 +97,25 @@ void Renderer::Render()
 				& v2Position{ v2.position };
 
 			if (v0Position.x < -1.0f || v0Position.x > 1.0f || v0Position.y < -1.0f || v0Position.y > 1.0f || v0Position.z < 0.0f || v0Position.z > 1.0f)
+#ifdef MULTI_THREAD_TRIANGLES
+				return;
+#else
 				continue;
+#endif
 
 			if (v1Position.x < -1.0f || v1Position.x > 1.0f || v1Position.y < -1.0f || v1Position.y > 1.0f || v1Position.z < 0.0f || v1Position.z > 1.0f)
+#ifdef MULTI_THREAD_TRIANGLES
+				return;
+#else
 				continue;
+#endif
 
 			if (v2Position.x < -1.0f || v2Position.x > 1.0f || v2Position.y < -1.0f || v2Position.y > 1.0f || v2Position.z < 0.0f || v2Position.z > 1.0f)
+#ifdef MULTI_THREAD_TRIANGLES
+				return;
+#else
 				continue;
+#endif
 
 			++v0Position.x *= 0.5f * WINDOW_WIDTH;
 			v0Position.y = 1.0f - v0Position.y;
@@ -134,7 +143,7 @@ void Renderer::Render()
 				vPixelsY.push_back(py);
 
 			std::for_each(std::execution::par, vPixelsY.begin(), vPixelsY.end(),
-				[this, &smallestBBX, &largestBBX, &v0, &v1, &v2, &v0Position, &v1Position, &v2Position, &meshWorld]
+				[this, &smallestBBX, &largestBBX, &v0, &v1, &v2, &v0Position, &v1Position, &v2Position, &mesh]
 				(float py)
 				{
 #else
@@ -206,11 +215,9 @@ void Renderer::Render()
 #ifdef MULTI_THREAD_PIXELS
 				});
 #endif
-
-#ifdef MULTI_THREAD_TRIANGLES
-		});
-#else
 		}
+#ifdef MULTI_THREAD_TRIANGLES
+	);
 #endif
 	}
 
