@@ -23,7 +23,7 @@ public:
 	Mesh& operator=(const Mesh&) = default;
 	Mesh& operator=(Mesh&&) noexcept = default;
 
-	Mesh(const std::string& OBJFilePath, const std::string& diffusePath, bool flipAxisAndWinding = true);
+	Mesh(const std::string& OBJFilePath, const std::string& colorTexturePath, const std::string& normalTexturePath, const std::string& specularTexture, const std::string& glossTexture, bool flipAxisAndWinding = true);
 
 	void SetTranslator(const Vector3& translator);
 	void SetRotorY(float yaw);
@@ -34,6 +34,9 @@ public:
 	PrimitiveTopology GetPrimitiveTopology() const;
 	const Matrix& GetWorldMatrix() const;
 	const Texture& GetColorTexture() const;
+	const Texture& GetNormalTexture() const;
+	const Texture& GetSpecularTexture() const;
+	const Texture& GetGlossTexture() const;
 
 	std::vector<VertexOut> m_vVerticesOut;
 
@@ -51,5 +54,9 @@ private:
 		m_Scalar,
 		m_WorldMatrix;
 
-	Texture m_ColorTexture;
+	Texture
+		m_ColorTexture,
+		m_NormalTexture,
+		m_SpecularTexture,
+		m_GlossTexture;
 };

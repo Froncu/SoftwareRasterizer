@@ -37,7 +37,12 @@
     <ClInclude Include="Vertex.hpp">
       <Filter>Objects</Filter>
     </ClInclude>
-    <ClInclude Include="Constants.hpp" />
+    <ClInclude Include="BRDFs.hpp">
+      <Filter>Mathematics</Filter>
+    </ClInclude>
+    <ClInclude Include="Constants.hpp">
+      <Filter>Mathematics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

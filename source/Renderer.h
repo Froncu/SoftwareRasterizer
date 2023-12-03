@@ -29,6 +29,7 @@ public:
 
 private:
 	void VertexTransformationFunction(std::vector<Mesh>& vMeshes) const;
+	ColorRGB PixelShading(const VertexOut& pixelAttributes, const Texture& colorTexture, const Texture& normalTexture, const Texture& specularTexture, const Texture& glossTexture);
 
 	SDL_Window* m_pWindow;
 

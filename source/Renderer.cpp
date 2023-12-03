@@ -4,6 +4,7 @@
 #include "Renderer.h"
 #include "SDL.h"
 #include "Vector2.h"
+#include "BRDFs.hpp"
 
 #pragma region Constructors/Destructor
 Renderer::Renderer(SDL_Window* pWindow) :
@@ -16,13 +17,21 @@ Renderer::Renderer(SDL_Window* pWindow) :
 
 	m_pDepthBufferPixels{ new float[WINDOW_WIDTH * WINDOW_HEIGHT] },
 
-	m_Camera{ Vector3(0.0f, 5.0f, -20.0f), TO_RADIANS * 60.0f },
+	m_Camera{ Vector3(0.0f, 0.0f, 0.0f), TO_RADIANS * 45.0f },
 
 	m_vMeshes
 	{
-		Mesh("Resources/tuktuk.obj", "Resources/tuktuk.png"),
+		Mesh
+		(
+			"Resources/vehicle.obj",
+			"Resources/vehicle_diffuse.png",
+			"Resources/vehicle_normal.png",
+			"Resources/vehicle_specular.png",
+			"Resources/vehicle_gloss.png"
+		),
 	}
 {
+	m_vMeshes[0].SetTranslator(Vector3(0.0f, 0.0f, 50.0f));
 }
 
 Renderer::~Renderer()
@@ -46,13 +55,13 @@ void Renderer::Render()
 {
 	SDL_LockSurface(m_pBackBuffer);
 
-	const ColorRGB spaceColor{ GRAY };
+	static constexpr ColorRGB SPACE_COLOR{ GRAY };
 	const Uint32 spaceColorMapped
 	{
 		SDL_MapRGB(m_pBackBuffer->format,
-		static_cast<uint8_t>(spaceColor.red * 255),
-		static_cast<uint8_t>(spaceColor.green * 255),
-		static_cast<uint8_t>(spaceColor.blue * 255))
+		static_cast<uint8_t>(SPACE_COLOR.red * 255),
+		static_cast<uint8_t>(SPACE_COLOR.green * 255),
+		static_cast<uint8_t>(SPACE_COLOR.blue * 255))
 	};
 
 	std::fill_n(m_pBackBufferPixels, WINDOW_PIXEL_COUNT, spaceColorMapped);
@@ -76,39 +85,34 @@ void Renderer::Render()
 				& v1{ vVerticesScreen[vIndicesScreen[index + (!triangleStrip ? 1 : isIndexEven ? 1 : 2)]] },
 				& v2{ vVerticesScreen[vIndicesScreen[index + (!triangleStrip ? 2 : isIndexEven ? 2 : 1)]] };
 
-			Vector4
-				& v0Position{ v0.position },
-				& v1Position{ v1.position },
-				& v2Position{ v2.position };
-
-			if (v0Position.x < -1.0f || v0Position.x > 1.0f || v0Position.y < -1.0f || v0Position.y > 1.0f || v0Position.z < 0.0f || v0Position.z > 1.0f)
+			if (v0.position.x < -1.0f || v0.position.x > 1.0f || v0.position.y < -1.0f || v0.position.y > 1.0f || v0.position.z < 0.0f || v0.position.z > 1.0f)
 				continue;
 
-			if (v1Position.x < -1.0f || v1Position.x > 1.0f || v1Position.y < -1.0f || v1Position.y > 1.0f || v1Position.z < 0.0f || v1Position.z > 1.0f)
+			if (v1.position.x < -1.0f || v1.position.x > 1.0f || v1.position.y < -1.0f || v1.position.y > 1.0f || v1.position.z < 0.0f || v1.position.z > 1.0f)
 				continue;
 
-			if (v2Position.x < -1.0f || v2Position.x > 1.0f || v2Position.y < -1.0f || v2Position.y > 1.0f || v2Position.z < 0.0f || v2Position.z > 1.0f)
+			if (v2.position.x < -1.0f || v2.position.x > 1.0f || v2.position.y < -1.0f || v2.position.y > 1.0f || v2.position.z < 0.0f || v2.position.z > 1.0f)
 				continue;
 
-			++v0Position.x *= 0.5f * WINDOW_WIDTH;
-			v0Position.y = 1.0f - v0Position.y;
-			v0Position.y *= 0.5f * WINDOW_HEIGHT;
+			++v0.position.x *= 0.5f * WINDOW_WIDTH;
+			v0.position.y = 1.0f - v0.position.y;
+			v0.position.y *= 0.5f * WINDOW_HEIGHT;
 
-			++v1Position.x *= 0.5f * WINDOW_WIDTH;
-			v1Position.y = 1.0f - v1Position.y;
-			v1Position.y *= 0.5f * WINDOW_HEIGHT;
+			++v1.position.x *= 0.5f * WINDOW_WIDTH;
+			v1.position.y = 1.0f - v1.position.y;
+			v1.position.y *= 0.5f * WINDOW_HEIGHT;
 
-			++v2Position.x *= 0.5f * WINDOW_WIDTH;
-			v2Position.y = 1.0f - v2Position.y;
-			v2Position.y *= 0.5f * WINDOW_HEIGHT;
+			++v2.position.x *= 0.5f * WINDOW_WIDTH;
+			v2.position.y = 1.0f - v2.position.y;
+			v2.position.y *= 0.5f * WINDOW_HEIGHT;
 
 			const float
-				largestBBX{ std::min(static_cast<float>(WINDOW_WIDTH), std::max(v0Position.x, std::max(v1Position.x, v2Position.x))) },
-				largestBBY{ std::min(static_cast<float>(WINDOW_HEIGHT), std::max(v0Position.y, std::max(v1Position.y, v2Position.y))) };
+				largestBBX{ std::min(static_cast<float>(WINDOW_WIDTH), std::max(v0.position.x, std::max(v1.position.x, v2.position.x))) },
+				largestBBY{ std::min(static_cast<float>(WINDOW_HEIGHT), std::max(v0.position.y, std::max(v1.position.y, v2.position.y))) };
 
 			const int
-				smallestBBX{ static_cast<int>(std::max(0.0f, std::min(v0Position.x, std::min(v1Position.x, v2Position.x)))) },
-				smallestBBY{ static_cast<int>(std::max(0.0f, std::min(v0Position.y, std::min(v1Position.y, v2Position.y)))) };
+				smallestBBX{ static_cast<int>(std::max(0.0f, std::min(v0.position.x, std::min(v1.position.x, v2.position.x)))) },
+				smallestBBY{ static_cast<int>(std::max(0.0f, std::min(v0.position.y, std::min(v1.position.y, v2.position.y)))) };
 
 			Vector2 pixelScreenPosition;
 			for (float py{ smallestBBY + 0.5f }; py < largestBBY; ++py)
@@ -120,22 +124,22 @@ void Renderer::Render()
 					pixelScreenPosition.x = px;
 
 					Vector2
-						a{ v1Position.GetVector2() - v0Position.GetVector2() },
-						c{ pixelScreenPosition - v0Position.GetVector2() };
+						a{ v1.position.GetVector2() - v0.position.GetVector2() },
+						c{ pixelScreenPosition - v0.position.GetVector2() };
 
 					const float v2Weight{ Vector2::Cross(a, c) };
 					if (v2Weight <= 0.0f)
 						continue;
 
-					a = v2Position.GetVector2() - v1Position.GetVector2();
-					c = pixelScreenPosition - v1Position.GetVector2();
+					a = v2.position.GetVector2() - v1.position.GetVector2();
+					c = pixelScreenPosition - v1.position.GetVector2();
 
 					const float v0Weight{ Vector2::Cross(a, c) };
 					if (v0Weight <= 0.0f)
 						continue;
 
-					a = v0Position.GetVector2() - v2Position.GetVector2();
-					c = pixelScreenPosition - v2Position.GetVector2();
+					a = v0.position.GetVector2() - v2.position.GetVector2();
+					c = pixelScreenPosition - v2.position.GetVector2();
 
 					const float v1Weight{ Vector2::Cross(a, c) };
 					if (v1Weight <= 0.0f)
@@ -143,9 +147,9 @@ void Renderer::Render()
 
 					const float
 						totalAreaInversed{ 1.0f / (v0Weight + v1Weight + v2Weight) },
-						v0WeightDepthRatio{ v0Weight / v0Position.w * totalAreaInversed },
-						v1WeightDepthRatio{ v1Weight / v1Position.w * totalAreaInversed },
-						v2WeightDepthRatio{ v2Weight / v2Position.w * totalAreaInversed },
+						v0WeightDepthRatio{ v0Weight / v0.position.w * totalAreaInversed },
+						v1WeightDepthRatio{ v1Weight / v1.position.w * totalAreaInversed },
+						v2WeightDepthRatio{ v2Weight / v2.position.w * totalAreaInversed },
 
 						interpolatedPixelDepth{ 1.0f / (v0WeightDepthRatio + v1WeightDepthRatio + v2WeightDepthRatio) };
 
@@ -156,27 +160,42 @@ void Renderer::Render()
 
 					m_pDepthBufferPixels[pixelIndex] = interpolatedPixelDepth;
 
-					const Vector2
-						& v0UV{ v0.UVValue },
-						& v1UV{ v1.UVValue },
-						& v2UV{ v2.UVValue };
+					VertexOut pixelAttributes;
 
-					const ColorRGB finalColor
-					{
-						mesh.GetColorTexture().Sample
+					pixelAttributes.position = v0.position * v0WeightDepthRatio + v1.position * v1WeightDepthRatio + v2.position * v2WeightDepthRatio;
+					pixelAttributes.position *= interpolatedPixelDepth;
+
+					pixelAttributes.color = v0.color * v0WeightDepthRatio + v1.color * v1WeightDepthRatio + v2.color * v2WeightDepthRatio;
+					pixelAttributes.color *= interpolatedPixelDepth;
+
+					pixelAttributes.UVValue = v0.UVValue * v0WeightDepthRatio + v1.UVValue * v1WeightDepthRatio + v2.UVValue * v2WeightDepthRatio;
+					pixelAttributes.UVValue *= interpolatedPixelDepth;
+
+					pixelAttributes.normal = v0.normal * v0WeightDepthRatio + v1.normal * v1WeightDepthRatio + v2.normal * v2WeightDepthRatio;
+					pixelAttributes.normal *= interpolatedPixelDepth;
+
+					pixelAttributes.tangent = v0.tangent * v0WeightDepthRatio + v1.tangent * v1WeightDepthRatio + v2.tangent * v2WeightDepthRatio;
+					pixelAttributes.tangent *= interpolatedPixelDepth;
+
+					pixelAttributes.viewDirection = v0.viewDirection * v0WeightDepthRatio + v1.viewDirection * v1WeightDepthRatio + v2.viewDirection * v2WeightDepthRatio;
+					pixelAttributes.viewDirection *= interpolatedPixelDepth;
+
+					const ColorRGB finalPixelColor
+					{ 
+						PixelShading
 						(
-							Vector2
-							(
-								v0UV.x * v0WeightDepthRatio + v1UV.x * v1WeightDepthRatio + v2UV.x * v2WeightDepthRatio,
-								v0UV.y * v0WeightDepthRatio + v1UV.y * v1WeightDepthRatio + v2UV.y * v2WeightDepthRatio
-							) * interpolatedPixelDepth
-						)
+							pixelAttributes, 
+							mesh.GetColorTexture(), 
+							mesh.GetNormalTexture(), 
+							mesh.GetSpecularTexture(),
+							mesh.GetSpecularTexture()
+						).GetMaxToOne() 
 					};
 
 					m_pBackBufferPixels[pixelIndex] = SDL_MapRGB(m_pBackBuffer->format,
-						static_cast<uint8_t>(finalColor.red * 255),
-						static_cast<uint8_t>(finalColor.green * 255),
-						static_cast<uint8_t>(finalColor.blue * 255));
+						static_cast<uint8_t>(finalPixelColor.red * 255),
+						static_cast<uint8_t>(finalPixelColor.green * 255),
+						static_cast<uint8_t>(finalPixelColor.blue * 255));
 				}
 			}
 		}
@@ -213,18 +232,51 @@ void Renderer::VertexTransformationFunction(std::vector<Mesh>& vMeshes) const
 			VertexOut& vertexOut{ vVerticesOut[index] };
 
 			vertexOut.color = vertexIn.color;
-			vertexOut.normal = vertexIn.normal;
-			vertexOut.tangent = vertexIn.tangent;
 			vertexOut.UVValue = vertexIn.UVValue;
-			vertexOut.viewDirection = vertexIn.viewDirection;
+			vertexOut.normal = worldMatrix.TransformVector(vertexIn.normal);
+			vertexOut.tangent = worldMatrix.TransformVector(vertexIn.tangent);
 
-			Vector4& vertexOutPosition{ vertexOut.position };
-			vertexOutPosition = worldMatrix.TransformPoint(vertexIn.position.GetPoint4());
-			vertexOutPosition = cameraMatrix.TransformPoint(vertexOutPosition);
-			vertexOutPosition.x /= vertexOutPosition.w;
-			vertexOutPosition.y /= vertexOutPosition.w;
-			vertexOutPosition.z /= vertexOutPosition.w;
+			vertexOut.position = worldMatrix.TransformPoint(vertexIn.position.GetPoint4());
+			vertexOut.viewDirection = (m_Camera.GetOrigin() - vertexOut.position.GetVector3()).GetNormalized();
+
+			vertexOut.position = cameraMatrix.TransformPoint(vertexOut.position);
+
+			vertexOut.position.x /= vertexOut.position.w;
+			vertexOut.position.y /= vertexOut.position.w;
+			vertexOut.position.z /= vertexOut.position.w;
 		}
 	}
+}
+
+ColorRGB Renderer::PixelShading(const VertexOut& pixelAttributes, const Texture& colorTexture, const Texture& normalTexture, const Texture& specularTexture, const Texture& glossTexture)
+{
+	static constexpr Vector3 LIGHT_DIRECTION{ -0.577f, 0.577f, -0.577f };
+	static constexpr float 
+		LIGHT_INTENSITY{ 7.0f },
+		SHININESS{ 25.0f };
+	static constexpr ColorRGB AMBIENT_COLOR{ 0.025f, 0.025f, 0.025f };
+
+	ColorRGB sampledNormalInColor{ normalTexture.Sample(pixelAttributes.UVValue) };
+	sampledNormalInColor = 2.0f * sampledNormalInColor - WHITE;
+	Vector3 sampledNormal{ sampledNormalInColor.red, sampledNormalInColor.green, sampledNormalInColor.blue };
+
+	sampledNormal = Matrix
+	(
+		pixelAttributes.tangent.GetVector4(),
+		Vector3::Cross(pixelAttributes.normal, pixelAttributes.tangent).GetNormalized().GetVector4(),
+		pixelAttributes.normal.GetVector4(),
+		VECTOR4_ZERO
+	).TransformVector(sampledNormal);
+
+	const float
+		dotLightDirectionNormal{ std::max(Vector3::Dot(LIGHT_DIRECTION, sampledNormal), 0.0f) },
+		specularReflectance{ glossTexture.Sample(pixelAttributes.UVValue).red },
+		phongExponent{ SHININESS * specularTexture.Sample(pixelAttributes.UVValue).red };
+
+	return
+		dotLightDirectionNormal *
+		(Lambert(LIGHT_INTENSITY, colorTexture.Sample(pixelAttributes.UVValue)) +
+		Phong(specularReflectance, phongExponent, LIGHT_DIRECTION, pixelAttributes.viewDirection, sampledNormal) +
+		AMBIENT_COLOR);
 }
 #pragma endregion

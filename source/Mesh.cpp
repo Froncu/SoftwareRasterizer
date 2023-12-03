@@ -3,7 +3,7 @@
 #include <fstream>
 
 #pragma region Constructors/Destructor
-Mesh::Mesh(const std::string& OBJFilePath, const std::string& diffusePath, bool flipAxisAndWinding) :
+Mesh::Mesh(const std::string& OBJFilePath, const std::string& colorTexturePath, const std::string& normalTexturePath, const std::string& specularTexture, const std::string& glossTexture, bool flipAxisAndWinding) :
 	m_vVertices{},
 	m_vVerticesOut{},
 
@@ -15,7 +15,10 @@ Mesh::Mesh(const std::string& OBJFilePath, const std::string& diffusePath, bool 
 	m_Scalar{ IDENTITY },
 	m_WorldMatrix{ IDENTITY },
 
-	m_ColorTexture{ diffusePath }
+	m_ColorTexture{ colorTexturePath },
+	m_NormalTexture{ normalTexturePath },
+	m_SpecularTexture{ specularTexture },
+	m_GlossTexture{ glossTexture }
 {
 	ParseOBJ(OBJFilePath, flipAxisAndWinding);
 }
@@ -65,6 +68,21 @@ const Matrix& Mesh::GetWorldMatrix() const
 const Texture& Mesh::GetColorTexture() const
 {
 	return m_ColorTexture;
+}
+
+const Texture& Mesh::GetNormalTexture() const
+{
+	return m_NormalTexture;
+}
+
+const Texture& Mesh::GetSpecularTexture() const
+{
+	return m_SpecularTexture;
+}
+
+const Texture& Mesh::GetGlossTexture() const
+{
+	return m_GlossTexture;
 }
 #pragma endregion
 
