@@ -1,13 +1,9 @@
-#include <execution>
-#include <algorithm>
+#include <cmath>
 
 #include "Constants.hpp"
 #include "Renderer.h"
 #include "SDL.h"
 #include "Vector2.h"
-
-//#define MULTI_THREAD_TRIANGLES
-//#define MULTI_THREAD_PIXELS
 
 #pragma region Constructors/Destructor
 Renderer::Renderer(SDL_Window* pWindow) :
@@ -71,18 +67,7 @@ void Renderer::Render()
 		const std::vector<uint32_t> vIndicesScreen{ mesh.GetIndices() };
 		std::vector<VertexOut> vVerticesScreen{ mesh.m_vVerticesOut };
 
-#ifdef MULTI_THREAD_TRIANGLES
-		std::vector<size_t> vIndices{};
-		vIndices.reserve(vIndicesScreen.size());
-		for (size_t index{}; index <= vIndicesScreen.size() - 2; index += triangleStrip ? 1 : 3)
-			vIndices.push_back(index);
-
-		std::for_each(std::execution::par, vIndices.begin(), vIndices.end(),
-			[this, triangleStrip, &vIndicesScreen, &vVerticesScreen, &mesh]
-			(size_t index)
-#else
 		for (size_t index{}; index < vIndicesScreen.size() - 2; index += triangleStrip ? 1 : 3)
-#endif
 		{
 			const bool isIndexEven{ !(index % 2) };
 
@@ -97,25 +82,13 @@ void Renderer::Render()
 				& v2Position{ v2.position };
 
 			if (v0Position.x < -1.0f || v0Position.x > 1.0f || v0Position.y < -1.0f || v0Position.y > 1.0f || v0Position.z < 0.0f || v0Position.z > 1.0f)
-#ifdef MULTI_THREAD_TRIANGLES
-				return;
-#else
 				continue;
-#endif
 
 			if (v1Position.x < -1.0f || v1Position.x > 1.0f || v1Position.y < -1.0f || v1Position.y > 1.0f || v1Position.z < 0.0f || v1Position.z > 1.0f)
-#ifdef MULTI_THREAD_TRIANGLES
-				return;
-#else
 				continue;
-#endif
 
 			if (v2Position.x < -1.0f || v2Position.x > 1.0f || v2Position.y < -1.0f || v2Position.y > 1.0f || v2Position.z < 0.0f || v2Position.z > 1.0f)
-#ifdef MULTI_THREAD_TRIANGLES
-				return;
-#else
 				continue;
-#endif
 
 			++v0Position.x *= 0.5f * WINDOW_WIDTH;
 			v0Position.y = 1.0f - v0Position.y;
@@ -137,21 +110,14 @@ void Renderer::Render()
 				smallestBBX{ static_cast<int>(std::max(0.0f, std::min(v0Position.x, std::min(v1Position.x, v2Position.x)))) },
 				smallestBBY{ static_cast<int>(std::max(0.0f, std::min(v0Position.y, std::min(v1Position.y, v2Position.y)))) };
 
-#ifdef MULTI_THREAD_PIXELS
-			std::vector<float> vPixelsY{};
+			Vector2 pixelScreenPosition;
 			for (float py{ smallestBBY + 0.5f }; py < largestBBY; ++py)
-				vPixelsY.push_back(py);
+			{
+				pixelScreenPosition.y = py;
 
-			std::for_each(std::execution::par, vPixelsY.begin(), vPixelsY.end(),
-				[this, &smallestBBX, &largestBBX, &v0, &v1, &v2, &v0Position, &v1Position, &v2Position, &mesh]
-				(float py)
-				{
-#else
-			for (float py{ smallestBBY + 0.5f }; py < largestBBY; ++py)
-#endif
 				for (float px{ smallestBBX + 0.5f }; px < largestBBX; ++px)
 				{
-					const Vector2 pixelScreenPosition{ px, py };
+					pixelScreenPosition.x = px;
 
 					Vector2
 						a{ v1Position.GetVector2() - v0Position.GetVector2() },
@@ -183,7 +149,7 @@ void Renderer::Render()
 
 						interpolatedPixelDepth{ 1.0f / (v0WeightDepthRatio + v1WeightDepthRatio + v2WeightDepthRatio) };
 
-					const uint32_t pixelIndex{ static_cast<uint32_t>(px) + (static_cast<uint32_t>(py) * WINDOW_WIDTH) };
+					const uint32_t pixelIndex{ static_cast<uint32_t>(pixelScreenPosition.x) + (static_cast<uint32_t>(pixelScreenPosition.y) * WINDOW_WIDTH) };
 
 					if (interpolatedPixelDepth >= m_pDepthBufferPixels[pixelIndex])
 						continue;
@@ -212,18 +178,13 @@ void Renderer::Render()
 						static_cast<uint8_t>(finalColor.green * 255),
 						static_cast<uint8_t>(finalColor.blue * 255));
 				}
-#ifdef MULTI_THREAD_PIXELS
-				});
-#endif
+			}
 		}
-#ifdef MULTI_THREAD_TRIANGLES
-	);
-#endif
 	}
 
-SDL_UnlockSurface(m_pBackBuffer);
-SDL_BlitSurface(m_pBackBuffer, nullptr, m_pFrontBuffer, nullptr);
-SDL_UpdateWindowSurface(m_pWindow);
+	SDL_UnlockSurface(m_pBackBuffer);
+	SDL_BlitSurface(m_pBackBuffer, nullptr, m_pFrontBuffer, nullptr);
+	SDL_UpdateWindowSurface(m_pWindow);
 }
 
 bool Renderer::SaveBufferToImage() const
@@ -267,6 +228,3 @@ void Renderer::VertexTransformationFunction(std::vector<Mesh>& vMeshes) const
 	}
 }
 #pragma endregion
-
-#undef TRIANGLE_LIST
-#undef MULTI_THREAD
