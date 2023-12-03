@@ -69,12 +69,12 @@ Texture& Texture::operator=(Texture&& other) noexcept
 
 
 #pragma region Public Methods
-ColorRGB Texture::Sample(const Vector2& UVValue) const
+ColorRGB Texture::Sample(const Vector2& UV) const
 {
 	const int
 		surfaceWidth{ m_pSurface->w },
-		pixelIndexX{ static_cast<int>((surfaceWidth - 1) * UVValue.x) },
-		pixelIndexY{ static_cast<int>((m_pSurface->h - 1) * UVValue.y) };
+		pixelIndexX{ static_cast<int>((surfaceWidth - 1) * UV.x) },
+		pixelIndexY{ static_cast<int>((m_pSurface->h - 1) * UV.y) };
 
 	Uint8
 		red,

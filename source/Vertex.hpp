@@ -5,11 +5,12 @@
 #include "Vector3.h"
 #include "Vector4.h"
 
-struct Vertex
+struct VertexLocal
 {
 	Vector3 position;
+
 	ColorRGB color;
-	Vector2 UVValue;
+	Vector2 UV;
 	Vector3
 		normal,
 		tangent,
@@ -18,9 +19,10 @@ struct Vertex
 
 struct VertexOut
 {
-	Vector4 position;
+	Vector4 positionNDC;
+
 	ColorRGB color;
-	Vector2 UVValue;
+	Vector2 UV;
 	Vector3
 		normal,
 		tangent,

@@ -55,141 +55,91 @@ void Renderer::Render()
 {
 	SDL_LockSurface(m_pBackBuffer);
 
-	static constexpr ColorRGB SPACE_COLOR{ GRAY };
-	const Uint32 spaceColorMapped
+	ResetBuffers();
+
+	CalculateVerticesOut(m_vMeshes);
+
+	for (Mesh& mesh : m_vMeshes)
 	{
-		SDL_MapRGB(m_pBackBuffer->format,
-		static_cast<uint8_t>(SPACE_COLOR.red * 255),
-		static_cast<uint8_t>(SPACE_COLOR.green * 255),
-		static_cast<uint8_t>(SPACE_COLOR.blue * 255))
-	};
+		std::vector<VertexOut>& vVerticesOut{ mesh.m_vVerticesOut };
+		const std::vector<uint32_t>& vIndices{ mesh.GetIndices() };
 
-	std::fill_n(m_pBackBufferPixels, WINDOW_PIXEL_COUNT, spaceColorMapped);
-	std::fill_n(m_pDepthBufferPixels, WINDOW_PIXEL_COUNT, INFINITY);
+		const bool usingTriangleStrip{ mesh.GetPrimitiveTopology() == Mesh::PrimitiveTopology::TriangleStrip };
 
-	VertexTransformationFunction(m_vMeshes);
-
-	for (const Mesh& mesh : m_vMeshes)
-	{
-		const bool triangleStrip{ mesh.GetPrimitiveTopology() == Mesh::PrimitiveTopology::TriangleStrip };
-
-		const std::vector<uint32_t> vIndicesScreen{ mesh.GetIndices() };
-		std::vector<VertexOut> vVerticesScreen{ mesh.m_vVerticesOut };
-
-		for (size_t index{}; index < vIndicesScreen.size() - 2; index += triangleStrip ? 1 : 3)
+		for (size_t index{}; index < vIndices.size() - 2; index += usingTriangleStrip ? 1 : 3)
 		{
-			const bool isIndexEven{ !(index % 2) };
+			const bool isIndexEven{ index % 2 == 0 };
 
 			VertexOut
-				& v0{ vVerticesScreen[vIndicesScreen[index]] },
-				& v1{ vVerticesScreen[vIndicesScreen[index + (!triangleStrip ? 1 : isIndexEven ? 1 : 2)]] },
-				& v2{ vVerticesScreen[vIndicesScreen[index + (!triangleStrip ? 2 : isIndexEven ? 2 : 1)]] };
+				& v0{ vVerticesOut[vIndices[index]] },
+				& v1{ vVerticesOut[vIndices[index + (!usingTriangleStrip ? 1 : isIndexEven ? 1 : 2)]] },
+				& v2{ vVerticesOut[vIndices[index + (!usingTriangleStrip ? 2 : isIndexEven ? 2 : 1)]] };
 
-			if (v0.position.x < -1.0f || v0.position.x > 1.0f || v0.position.y < -1.0f || v0.position.y > 1.0f || v0.position.z < 0.0f || v0.position.z > 1.0f)
+			if (!IsTriangleInFrustum(v0.positionNDC.GetVector3(), v1.positionNDC.GetVector3(), v2.positionNDC.GetVector3()))
 				continue;
 
-			if (v1.position.x < -1.0f || v1.position.x > 1.0f || v1.position.y < -1.0f || v1.position.y > 1.0f || v1.position.z < 0.0f || v1.position.z > 1.0f)
-				continue;
+			Vector2
+				v0PositionRaster,
+				v1PositionRaster,
+				v2PositionRaster;
+			NDCToRasterSpace(v0.positionNDC.GetVector3(), v1.positionNDC.GetVector3(), v2.positionNDC.GetVector3(), v0PositionRaster, v1PositionRaster, v2PositionRaster);
 
-			if (v2.position.x < -1.0f || v2.position.x > 1.0f || v2.position.y < -1.0f || v2.position.y > 1.0f || v2.position.z < 0.0f || v2.position.z > 1.0f)
-				continue;
+			float
+				smallestBBX,
+				smallestBBY,
+				largestBBX,
+				largestBBY;
+			CalculateBoundingBox(v0PositionRaster, v1PositionRaster, v2PositionRaster, smallestBBX, smallestBBY, largestBBX, largestBBY);
 
-			++v0.position.x *= 0.5f * WINDOW_WIDTH;
-			v0.position.y = 1.0f - v0.position.y;
-			v0.position.y *= 0.5f * WINDOW_HEIGHT;
-
-			++v1.position.x *= 0.5f * WINDOW_WIDTH;
-			v1.position.y = 1.0f - v1.position.y;
-			v1.position.y *= 0.5f * WINDOW_HEIGHT;
-
-			++v2.position.x *= 0.5f * WINDOW_WIDTH;
-			v2.position.y = 1.0f - v2.position.y;
-			v2.position.y *= 0.5f * WINDOW_HEIGHT;
-
-			const float
-				largestBBX{ std::min(static_cast<float>(WINDOW_WIDTH), std::max(v0.position.x, std::max(v1.position.x, v2.position.x))) },
-				largestBBY{ std::min(static_cast<float>(WINDOW_HEIGHT), std::max(v0.position.y, std::max(v1.position.y, v2.position.y))) };
-
-			const int
-				smallestBBX{ static_cast<int>(std::max(0.0f, std::min(v0.position.x, std::min(v1.position.x, v2.position.x)))) },
-				smallestBBY{ static_cast<int>(std::max(0.0f, std::min(v0.position.y, std::min(v1.position.y, v2.position.y)))) };
-
-			Vector2 pixelScreenPosition;
-			for (float py{ smallestBBY + 0.5f }; py < largestBBY; ++py)
+			Vector2 pixelPosition;
+			for (float px{ smallestBBX }; px < largestBBX; ++px)
 			{
-				pixelScreenPosition.y = py;
+				pixelPosition.x = px;
 
-				for (float px{ smallestBBX + 0.5f }; px < largestBBX; ++px)
+				for (float py{ smallestBBY }; py < largestBBY; ++py)
 				{
-					pixelScreenPosition.x = px;
+					pixelPosition.y = py;
 
-					Vector2
-						a{ v1.position.GetVector2() - v0.position.GetVector2() },
-						c{ pixelScreenPosition - v0.position.GetVector2() };
+					const uint32_t pixelIndex{ static_cast<uint32_t>(pixelPosition.x) + (static_cast<uint32_t>(pixelPosition.y) * WINDOW_WIDTH) };
 
-					const float v2Weight{ Vector2::Cross(a, c) };
-					if (v2Weight <= 0.0f)
+					float
+						v0Weight,
+						v1Weight,
+						v2Weight;
+					if (!IsPixelInTriangle(pixelPosition, v0PositionRaster, v1PositionRaster, v2PositionRaster, v0Weight, v1Weight, v2Weight))
 						continue;
 
-					a = v2.position.GetVector2() - v1.position.GetVector2();
-					c = pixelScreenPosition - v1.position.GetVector2();
+					float
+						v0InterpolatedWeight,
+						v1InterpolatedWeight,
+						v2InterpolatedWeight;
+					CalculateInterpolatedWeights(
+						v0Weight, v1Weight, v2Weight,
+						v0.positionNDC.w, v1.positionNDC.w, v2.positionNDC.w,
+						v0InterpolatedWeight, v1InterpolatedWeight, v2InterpolatedWeight);
 
-					const float v0Weight{ Vector2::Cross(a, c) };
-					if (v0Weight <= 0.0f)
+					float interpolatedPixelDepth;
+					if (!DepthTest(pixelIndex, v0InterpolatedWeight, v1InterpolatedWeight, v2InterpolatedWeight, interpolatedPixelDepth))
 						continue;
 
-					a = v0.position.GetVector2() - v2.position.GetVector2();
-					c = pixelScreenPosition - v2.position.GetVector2();
-
-					const float v1Weight{ Vector2::Cross(a, c) };
-					if (v1Weight <= 0.0f)
-						continue;
-
-					const float
-						totalAreaInversed{ 1.0f / (v0Weight + v1Weight + v2Weight) },
-						v0WeightDepthRatio{ v0Weight / v0.position.w * totalAreaInversed },
-						v1WeightDepthRatio{ v1Weight / v1.position.w * totalAreaInversed },
-						v2WeightDepthRatio{ v2Weight / v2.position.w * totalAreaInversed },
-
-						interpolatedPixelDepth{ 1.0f / (v0WeightDepthRatio + v1WeightDepthRatio + v2WeightDepthRatio) };
-
-					const uint32_t pixelIndex{ static_cast<uint32_t>(pixelScreenPosition.x) + (static_cast<uint32_t>(pixelScreenPosition.y) * WINDOW_WIDTH) };
-
-					if (interpolatedPixelDepth >= m_pDepthBufferPixels[pixelIndex])
-						continue;
-
-					m_pDepthBufferPixels[pixelIndex] = interpolatedPixelDepth;
-
-					VertexOut pixelAttributes;
-
-					pixelAttributes.position = v0.position * v0WeightDepthRatio + v1.position * v1WeightDepthRatio + v2.position * v2WeightDepthRatio;
-					pixelAttributes.position *= interpolatedPixelDepth;
-
-					pixelAttributes.color = v0.color * v0WeightDepthRatio + v1.color * v1WeightDepthRatio + v2.color * v2WeightDepthRatio;
-					pixelAttributes.color *= interpolatedPixelDepth;
-
-					pixelAttributes.UVValue = v0.UVValue * v0WeightDepthRatio + v1.UVValue * v1WeightDepthRatio + v2.UVValue * v2WeightDepthRatio;
-					pixelAttributes.UVValue *= interpolatedPixelDepth;
-
-					pixelAttributes.normal = v0.normal * v0WeightDepthRatio + v1.normal * v1WeightDepthRatio + v2.normal * v2WeightDepthRatio;
-					pixelAttributes.normal *= interpolatedPixelDepth;
-
-					pixelAttributes.tangent = v0.tangent * v0WeightDepthRatio + v1.tangent * v1WeightDepthRatio + v2.tangent * v2WeightDepthRatio;
-					pixelAttributes.tangent *= interpolatedPixelDepth;
-
-					pixelAttributes.viewDirection = v0.viewDirection * v0WeightDepthRatio + v1.viewDirection * v1WeightDepthRatio + v2.viewDirection * v2WeightDepthRatio;
-					pixelAttributes.viewDirection *= interpolatedPixelDepth;
+					const VertexOut pixelAttributes
+					{
+						GetPixelAttributes(
+						v0, v1, v2,
+						v0InterpolatedWeight, v1InterpolatedWeight, v2InterpolatedWeight,
+						interpolatedPixelDepth)
+					};
 
 					const ColorRGB finalPixelColor
-					{ 
-						PixelShading
+					{
+						GetShadedPixelColor
 						(
-							pixelAttributes, 
-							mesh.GetColorTexture(), 
-							mesh.GetNormalTexture(), 
+							pixelAttributes,
+							mesh.GetColorTexture(),
+							mesh.GetNormalTexture(),
 							mesh.GetSpecularTexture(),
 							mesh.GetSpecularTexture()
-						).GetMaxToOne() 
+						)
 					};
 
 					m_pBackBufferPixels[pixelIndex] = SDL_MapRGB(m_pBackBuffer->format,
@@ -215,68 +165,194 @@ bool Renderer::SaveBufferToImage() const
 
 
 #pragma region Private Methods
-void Renderer::VertexTransformationFunction(std::vector<Mesh>& vMeshes) const
+void Renderer::ResetBuffers()
 {
-	const Matrix& cameraMatrix{ m_Camera.GetCameraMatrix() };
+	static constexpr ColorRGB SPACE_COLOR{ GRAY };
+
+	std::fill_n(m_pDepthBufferPixels, WINDOW_PIXEL_COUNT, INFINITY);
+	std::fill_n(m_pBackBufferPixels, WINDOW_PIXEL_COUNT, SDL_MapRGB(m_pBackBuffer->format,
+		static_cast<Uint8>(SPACE_COLOR.red * 255),
+		static_cast<Uint8>(SPACE_COLOR.green * 255),
+		static_cast<Uint8>(SPACE_COLOR.blue * 255)));
+}
+
+void Renderer::CalculateVerticesOut(std::vector<Mesh>& vMeshes) const
+{
+	const Matrix
+		& inversedViewMatrix{ m_Camera.GetInversedViewMatrix() },
+		& projectionMatrix{ m_Camera.GetProjectionMatrix() };
 
 	for (Mesh& mesh : vMeshes)
 	{
 		const Matrix& worldMatrix{ mesh.GetWorldMatrix() };
 
-		const std::vector<Vertex>& vVerticesIn{ mesh.GetVertices() };
+		const std::vector<VertexLocal>& vVerticesLocal{ mesh.GetVerticesLocal() };
 		std::vector<VertexOut>& vVerticesOut{ mesh.m_vVerticesOut };
 
-		for (size_t index{}; index < vVerticesIn.size(); ++index)
+		for (size_t index{}; index < vVerticesLocal.size(); ++index)
 		{
-			const Vertex& vertexIn{ vVerticesIn[index] };
+			const VertexLocal& vertexLocal{ vVerticesLocal[index] };
 			VertexOut& vertexOut{ vVerticesOut[index] };
 
-			vertexOut.color = vertexIn.color;
-			vertexOut.UVValue = vertexIn.UVValue;
-			vertexOut.normal = worldMatrix.TransformVector(vertexIn.normal);
-			vertexOut.tangent = worldMatrix.TransformVector(vertexIn.tangent);
+			vertexOut.color = vertexLocal.color;
+			vertexOut.UV = vertexLocal.UV;
 
-			vertexOut.position = worldMatrix.TransformPoint(vertexIn.position.GetPoint4());
-			vertexOut.viewDirection = (m_Camera.GetOrigin() - vertexOut.position.GetVector3()).GetNormalized();
+			vertexOut.normal = worldMatrix.TransformVector(vertexLocal.normal);
+			vertexOut.tangent = worldMatrix.TransformVector(vertexLocal.tangent);
 
-			vertexOut.position = cameraMatrix.TransformPoint(vertexOut.position);
+			const Vector3 vertexOutPositionWorld = worldMatrix.TransformPoint(vertexLocal.position);
+			vertexOut.viewDirection = (vertexOutPositionWorld - m_Camera.GetOrigin()).GetNormalized();
 
-			vertexOut.position.x /= vertexOut.position.w;
-			vertexOut.position.y /= vertexOut.position.w;
-			vertexOut.position.z /= vertexOut.position.w;
+			vertexOut.positionNDC = inversedViewMatrix.TransformPoint(vertexOutPositionWorld.GetPoint4());
+			vertexOut.positionNDC = projectionMatrix.TransformPoint(vertexOut.positionNDC);
+
+			vertexOut.positionNDC.x /= vertexOut.positionNDC.w;
+			vertexOut.positionNDC.y /= vertexOut.positionNDC.w;
+			vertexOut.positionNDC.z /= vertexOut.positionNDC.w;
 		}
 	}
 }
 
-ColorRGB Renderer::PixelShading(const VertexOut& pixelAttributes, const Texture& colorTexture, const Texture& normalTexture, const Texture& specularTexture, const Texture& glossTexture)
+bool Renderer::IsTriangleInFrustum(const Vector3& v0Position, const Vector3& v1Position, const Vector3& v2Position)
+{
+	if (v0Position.x < -1.0f || v0Position.x > 1.0f || v0Position.y < -1.0f || v0Position.y > 1.0f || v0Position.z < 0.0f || v0Position.z > 1.0f)
+		return false;
+
+	if (v1Position.x < -1.0f || v1Position.x > 1.0f || v1Position.y < -1.0f || v1Position.y > 1.0f || v1Position.z < 0.0f || v1Position.z > 1.0f)
+		return false;
+
+	if (v2Position.x < -1.0f || v2Position.x > 1.0f || v2Position.y < -1.0f || v2Position.y > 1.0f || v2Position.z < 0.0f || v2Position.z > 1.0f)
+		return false;
+
+	return true;
+}
+
+void Renderer::NDCToRasterSpace(const Vector3& v0PositionNDC, const Vector3& v1PositionNDC, const Vector3& v2PositionNDC, Vector2& v0PositionRaster, Vector2& v1PositionRaster, Vector2& v2PositionRaster)
+{
+	v0PositionRaster.x = (1.0f + v0PositionNDC.x) * 0.5f * WINDOW_WIDTH;
+	v0PositionRaster.y = (1.0f - v0PositionNDC.y) * 0.5f * WINDOW_HEIGHT;
+
+	v1PositionRaster.x = (1.0f + v1PositionNDC.x) * 0.5f * WINDOW_WIDTH;
+	v1PositionRaster.y = (1.0f - v1PositionNDC.y) * 0.5f * WINDOW_HEIGHT;
+
+	v2PositionRaster.x = (1.0f + v2PositionNDC.x) * 0.5f * WINDOW_WIDTH;
+	v2PositionRaster.y = (1.0f - v2PositionNDC.y) * 0.5f * WINDOW_HEIGHT;
+}
+
+void Renderer::CalculateBoundingBox(const Vector2& v0Position, const Vector2& v1Position, const Vector2& v2Position, float& smallestBBX, float& smallestBBY, float& largestBBX, float& largestBBY)
+{
+	smallestBBX = std::floor(std::max(0.0f, std::min(v0Position.x, std::min(v1Position.x, v2Position.x)))) + 0.5f;
+	smallestBBY = std::floor(std::max(0.0f, std::min(v0Position.y, std::min(v1Position.y, v2Position.y)))) + 0.5f;
+
+	largestBBX = std::min(static_cast<float>(WINDOW_WIDTH), std::max(v0Position.x, std::max(v1Position.x, v2Position.x)));
+	largestBBY = std::min(static_cast<float>(WINDOW_HEIGHT), std::max(v0Position.y, std::max(v1Position.y, v2Position.y)));
+}
+
+bool Renderer::IsPixelInTriangle(const Vector2& pixelPosition, const Vector2& v0Position, const Vector2& v1Position, const Vector2& v2Position, float& v0Weight, float& v1Weight, float& v2Weight)
+{
+	Vector2
+		a{ v1Position - v0Position },
+		c{ pixelPosition - v0Position };
+
+	v2Weight = Vector2::Cross(a, c);
+	if (v2Weight <= 0.0f)
+		return false;
+
+	a = v2Position - v1Position;
+	c = pixelPosition - v1Position;
+
+	v0Weight = Vector2::Cross(a, c);
+	if (v0Weight <= 0.0f)
+		return false;
+
+	a = v0Position - v2Position;
+	c = pixelPosition - v2Position;
+
+	v1Weight = Vector2::Cross(a, c);
+	if (v1Weight <= 0.0f)
+		return false;
+
+	return true;
+}
+
+void Renderer::CalculateInterpolatedWeights(float v0Weight, float v1Weight, float v2Weight, float v0CameraDepth, float v1CameraDepth, float v2CameraDepth, float& v0InterpolatedWeight, float& v1InterpolatedWeight, float& v2InterpolatedWeight)
+{
+	const float totalAreaInversed{ 1.0f / (v0Weight + v1Weight + v2Weight) };
+
+	v0InterpolatedWeight = v0Weight / v0CameraDepth * totalAreaInversed;
+	v1InterpolatedWeight = v1Weight / v1CameraDepth * totalAreaInversed;
+	v2InterpolatedWeight = v2Weight / v2CameraDepth * totalAreaInversed;
+}
+
+bool Renderer::DepthTest(uint32_t pixelIndex, float v0InterpolatedWeight, float v1InterpolatedWeight, float v2InterpolatedWeight, float& interpolatedPixelDepth)
+{
+	interpolatedPixelDepth = 1.0f / (v0InterpolatedWeight + v1InterpolatedWeight + v2InterpolatedWeight);
+
+	if (interpolatedPixelDepth >= m_pDepthBufferPixels[pixelIndex])
+		return false;
+
+	m_pDepthBufferPixels[pixelIndex] = interpolatedPixelDepth;
+	return true;
+}
+
+VertexOut Renderer::GetPixelAttributes(const VertexOut& v0, const VertexOut& v1, const VertexOut& v2, float v0InterpolatedWeight, float v1InterpolatedWeight, float v2InterpolatedWeight, float interpolatedPixelDepth)
+{
+	VertexOut pixelAttributes;
+
+	pixelAttributes.positionNDC = v0.positionNDC * v0InterpolatedWeight + v1.positionNDC * v1InterpolatedWeight + v2.positionNDC * v2InterpolatedWeight;
+	pixelAttributes.positionNDC *= interpolatedPixelDepth;
+
+	pixelAttributes.color = v0.color * v0InterpolatedWeight + v1.color * v1InterpolatedWeight + v2.color * v2InterpolatedWeight;
+	pixelAttributes.color *= interpolatedPixelDepth;
+
+	pixelAttributes.UV = v0.UV * v0InterpolatedWeight + v1.UV * v1InterpolatedWeight + v2.UV * v2InterpolatedWeight;
+	pixelAttributes.UV *= interpolatedPixelDepth;
+
+	pixelAttributes.normal = v0.normal * v0InterpolatedWeight + v1.normal * v1InterpolatedWeight + v2.normal * v2InterpolatedWeight;
+	pixelAttributes.normal *= interpolatedPixelDepth;
+
+	pixelAttributes.tangent = v0.tangent * v0InterpolatedWeight + v1.tangent * v1InterpolatedWeight + v2.tangent * v2InterpolatedWeight;
+	pixelAttributes.tangent *= interpolatedPixelDepth;
+
+	pixelAttributes.viewDirection = v0.viewDirection * v0InterpolatedWeight + v1.viewDirection * v1InterpolatedWeight + v2.viewDirection * v2InterpolatedWeight;
+	pixelAttributes.viewDirection *= interpolatedPixelDepth;
+
+	return pixelAttributes;
+}
+
+ColorRGB Renderer::GetShadedPixelColor(const VertexOut& pixelAttributes, const Texture& colorTexture, const Texture& normalTexture, const Texture& specularTexture, const Texture& glossTexture)
 {
 	static constexpr Vector3 LIGHT_DIRECTION{ -0.577f, 0.577f, -0.577f };
-	static constexpr float 
-		LIGHT_INTENSITY{ 7.0f },
-		SHININESS{ 25.0f };
+	static constexpr float LIGHT_INTENSITY{ 7.0f }, SHININESS{ 25.0f };
 	static constexpr ColorRGB AMBIENT_COLOR{ 0.025f, 0.025f, 0.025f };
 
-	ColorRGB sampledNormalInColor{ normalTexture.Sample(pixelAttributes.UVValue) };
-	sampledNormalInColor = 2.0f * sampledNormalInColor - WHITE;
-	Vector3 sampledNormal{ sampledNormalInColor.red, sampledNormalInColor.green, sampledNormalInColor.blue };
+	const Vector2& UV{ pixelAttributes.UV };
 
-	sampledNormal = Matrix
-	(
-		pixelAttributes.tangent.GetVector4(),
-		Vector3::Cross(pixelAttributes.normal, pixelAttributes.tangent).GetNormalized().GetVector4(),
-		pixelAttributes.normal.GetVector4(),
-		VECTOR4_ZERO
-	).TransformVector(sampledNormal);
+	const Vector3 sampledNormal{ GetSampledNormal(UV, pixelAttributes.normal, pixelAttributes.tangent, normalTexture) };
 
 	const float
 		dotLightDirectionNormal{ std::max(Vector3::Dot(LIGHT_DIRECTION, sampledNormal), 0.0f) },
-		specularReflectance{ glossTexture.Sample(pixelAttributes.UVValue).red },
-		phongExponent{ SHININESS * specularTexture.Sample(pixelAttributes.UVValue).red };
+		phongExponent{ SHININESS * specularTexture.Sample(UV).red };
+	const ColorRGB specularReflectance{ glossTexture.Sample(UV) };
 
 	return
-		dotLightDirectionNormal *
-		(Lambert(LIGHT_INTENSITY, colorTexture.Sample(pixelAttributes.UVValue)) +
+		((Lambert(LIGHT_INTENSITY, colorTexture.Sample(UV)) +
 		Phong(specularReflectance, phongExponent, LIGHT_DIRECTION, pixelAttributes.viewDirection, sampledNormal) +
-		AMBIENT_COLOR);
+		AMBIENT_COLOR) * dotLightDirectionNormal).GetMaxToOne();
+}
+
+Vector3 Renderer::GetSampledNormal(const Vector2& UV, const Vector3& normal, const Vector3& tangent, const Texture& normalTexture)
+{
+	const ColorRGB sampledNormalInColor{ normalTexture.Sample(UV) * 2.0f - WHITE };
+
+	const Vector3 binormal{ Vector3::Cross(normal, tangent).GetNormalized() };
+
+	return Matrix
+	(
+		tangent.GetVector4(),
+		binormal.GetVector4(),
+		normal.GetVector4(),
+		VECTOR4_ZERO
+	).TransformVector(Vector3(sampledNormalInColor.red, sampledNormalInColor.green, sampledNormalInColor.blue));
 }
 #pragma endregion

@@ -16,11 +16,10 @@ Camera::Camera(const Vector3& origin, float fieldOfViewAngle) :
 	m_TotalPitch{},
 	m_TotalYaw{},
 
-	m_ViewMatrix{},
-	m_ProjectionMatrix{},
-	m_CameraMatrix{}
+	m_InversedViewMatrix{},
+	m_ProjectionMatrix{}
 {
-	UpdateViewMatrix();
+	UpdateInversedViewMatrix();
 	UpdateProjectionMatrix();
 }
 #pragma endregion
@@ -49,19 +48,19 @@ void Camera::Update(const Timer& timer)
 	case SDL_BUTTON(1):
 		m_Origin -= m_ForwardDirection * float(mouseY) * deltaTime * MOVEMENT_SPEED * MOUSE_SENSITIVITY;
 		m_TotalYaw += TO_RADIANS * fieldOfViewScalar * mouseX * MOUSE_SENSITIVITY;
-		UpdateViewMatrix();
+		UpdateInversedViewMatrix();
 		break;
 
 	case SDL_BUTTON(3):
 		m_TotalYaw += TO_RADIANS * fieldOfViewScalar * mouseX * MOUSE_SENSITIVITY;
 		m_TotalPitch += TO_RADIANS * fieldOfViewScalar * mouseY * MOUSE_SENSITIVITY;
 		m_TotalPitch = std::max(-MAX_TOTAL_PITCH, std::min(m_TotalPitch, MAX_TOTAL_PITCH));
-		UpdateViewMatrix();
+		UpdateInversedViewMatrix();
 		break;
 
 	case SDL_BUTTON_X2:
 		m_Origin -= m_UpDirection * float(mouseY) * deltaTime * MOVEMENT_SPEED * MOUSE_SENSITIVITY;
-		UpdateViewMatrix();
+		UpdateInversedViewMatrix();
 		break;
 	}
 
@@ -71,25 +70,25 @@ void Camera::Update(const Timer& timer)
 	if (pKeyboardState[SDL_SCANCODE_W])
 	{
 		m_Origin += m_ForwardDirection * deltaTime * MOVEMENT_SPEED;
-		UpdateViewMatrix();
+		UpdateInversedViewMatrix();
 	}
 
 	if (pKeyboardState[SDL_SCANCODE_S])
 	{
 		m_Origin -= m_ForwardDirection * deltaTime * MOVEMENT_SPEED;
-		UpdateViewMatrix();
+		UpdateInversedViewMatrix();
 	}
 
 	if (pKeyboardState[SDL_SCANCODE_A])
 	{
 		m_Origin -= m_RightDirection * deltaTime * MOVEMENT_SPEED;
-		UpdateViewMatrix();
+		UpdateInversedViewMatrix();
 	}
 
 	if (pKeyboardState[SDL_SCANCODE_D])
 	{
 		m_Origin += m_RightDirection * deltaTime * MOVEMENT_SPEED;
-		UpdateViewMatrix();
+		UpdateInversedViewMatrix();
 	}
 }
 #pragma endregion
@@ -97,19 +96,14 @@ void Camera::Update(const Timer& timer)
 
 
 #pragma region Getters
-const Matrix& Camera::GetViewMatrix() const
+const Matrix& Camera::GetInversedViewMatrix() const
 {
-	return m_ViewMatrix;
+	return m_InversedViewMatrix;
 }
 
 const Matrix& Camera::GetProjectionMatrix() const
 {
 	return m_ProjectionMatrix;
-}
-
-const Matrix& Camera::GetCameraMatrix() const
-{
-	return m_CameraMatrix;
 }
 
 const Vector3& Camera::GetOrigin() const
@@ -149,22 +143,20 @@ void Camera::IncrementFieldOfViewAngle(float angleIncrementer)
 
 
 #pragma region Private Methods
-void Camera::UpdateViewMatrix()
+void Camera::UpdateInversedViewMatrix()
 {
 	static constexpr Vector3 WORLD_UP{ 0.0f, 1.0f, 0.0f };
 	m_ForwardDirection = Matrix(Matrix::CreateRotorX(m_TotalPitch) * Matrix::CreateRotorY(m_TotalYaw)).TransformVector(VECTOR3_UNIT_Z);
 	m_RightDirection = Vector3::Cross(WORLD_UP, m_ForwardDirection).GetNormalized();
 	m_UpDirection = Vector3::Cross(m_ForwardDirection, m_RightDirection).GetNormalized();
 
-	m_ViewMatrix = Matrix
+	m_InversedViewMatrix = Matrix
 	(
 		m_RightDirection.GetVector4(),
 		m_UpDirection.GetVector4(),
 		m_ForwardDirection.GetVector4(),
 		m_Origin.GetPoint4()
 	).GetInversed();
-
-	UpdateCameraMatrix();
 
 	//ViewMatrix => Matrix::CreateLookAtLH(...) [not implemented yet]
 	//DirectX Implementation => https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dxmatrixlookatlh
@@ -189,14 +181,7 @@ void Camera::UpdateProjectionMatrix()
 		TRANSLATOR
 	);
 
-	UpdateCameraMatrix();
-
 	//ProjectionMatrix => Matrix::CreatePerspectiveFovLH(...) [not implemented yet]
 	//DirectX Implementation => https://learn.microsoft.com/en-us/windows/win32/direct3d9/d3dxmatrixperspectivefovlh
-}
-
-void Camera::UpdateCameraMatrix()
-{
-	m_CameraMatrix = m_ViewMatrix * m_ProjectionMatrix;
 }
 #pragma endregion

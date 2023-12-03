@@ -14,14 +14,14 @@ ColorRGB Lambert(const ColorRGB& diffuseReflectance, const ColorRGB& diffuseColo
 	return diffuseReflectance * diffuseColor / PI;
 }
 
-ColorRGB Phong(float specularReflectance, float phongExponent, const Vector3& lightDirection, const Vector3& viewDirection, const Vector3& normal)
+ColorRGB Phong(const ColorRGB& specularReflectance, float phongExponent, const Vector3& lightDirection, const Vector3& viewDirection, const Vector3& normal)
 {
 	const Vector3 reflectedLightDirection{ Vector3::Reflect(lightDirection, normal) };
-	const float dot{ Vector3::Dot(reflectedLightDirection, -viewDirection) };
+	const float dot{ Vector3::Dot(reflectedLightDirection, viewDirection) };
 	if (dot <= 0.0f)
 		return BLACK;
 
-	return WHITE * specularReflectance * powf(dot, phongExponent);
+	return specularReflectance * powf(dot, phongExponent);
 }
 
 ColorRGB FresnelFunctionSchlick(const Vector3& h, const Vector3& viewDirection, const ColorRGB& f0)

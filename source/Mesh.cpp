@@ -4,7 +4,7 @@
 
 #pragma region Constructors/Destructor
 Mesh::Mesh(const std::string& OBJFilePath, const std::string& colorTexturePath, const std::string& normalTexturePath, const std::string& specularTexture, const std::string& glossTexture, bool flipAxisAndWinding) :
-	m_vVertices{},
+	m_vVerticesLocal{},
 	m_vVerticesOut{},
 
 	m_vIndices{},
@@ -45,9 +45,9 @@ void Mesh::SetScalar(float scalar)
 	m_WorldMatrix = m_Scalar * m_Rotor * m_Translator;
 }
 
-const std::vector<Vertex>& Mesh::GetVertices() const
+const std::vector<VertexLocal>& Mesh::GetVerticesLocal() const
 {
-	return m_vVertices;
+	return m_vVerticesLocal;
 }
 
 const std::vector<uint32_t>& Mesh::GetIndices() const
@@ -91,151 +91,144 @@ const Texture& Mesh::GetGlossTexture() const
 #pragma region Private Methods
 bool Mesh::ParseOBJ(const std::string& path, bool flipAxisAndWinding)
 {
-	std::ifstream file(path);
+	std::ifstream file{ path };
 	if (!file)
 		return false;
 
-	std::vector<Vector3> positions{};
-	std::vector<Vector3> normals{};
-	std::vector<Vector2> UVs{};
-
-	m_vVertices.clear();
+	m_vVerticesLocal.clear();
 	m_vIndices.clear();
 
-	std::string sCommand;
-	// start a while iteration ending when the end of file is reached (ios::eof)
+	std::string command;
+	std::vector<Vector3> vPositions{};
+	std::vector<Vector2> vUVs{};
+	std::vector<Vector3> vNormals{};
+
 	while (!file.eof())
 	{
-		//read the first word of the string, use the >> operator (istream::operator>>) 
-		file >> sCommand;
-		//use conditional statements to process the different commands	
-		if (sCommand == "#")
+		file >> command;
+
+		if (command == "v") // Vertex (Position Local)
 		{
-			// Ignore Comment
-		}
-		else if (sCommand == "v")
-		{
-			//Vertex
 			float x, y, z;
 			file >> x >> y >> z;
-
-			positions.emplace_back(x, y, z);
+			vPositions.emplace_back(x, y, z);
 		}
-		else if (sCommand == "vt")
+		else if (command == "vt") // Vertex Texture Coordinate (UV)
 		{
-			// Vertex TexCoord
 			float u, v;
 			file >> u >> v;
-			UVs.emplace_back(u, 1 - v);
+			vUVs.emplace_back(u, 1.0f - v);
 		}
-		else if (sCommand == "vn")
+		else if (command == "vn") // Vertex Normal
 		{
-			// Vertex Normal
 			float x, y, z;
 			file >> x >> y >> z;
-
-			normals.emplace_back(x, y, z);
+			vNormals.emplace_back(x, y, z);
 		}
-		else if (sCommand == "f")
+		else if (command == "f") // Face (Triangle)
 		{
-			//if a face is read:
-			//construct the 3 vertices, add them to the vertex array
-			//add three indices to the index array
-			//add the material index as attibute to the attribute array
-			//
-			// Faces or triangles
-			Vertex vertex{};
-			size_t iPosition, iTexCoord, iNormal;
+			std::vector<uint32_t> vTemporaryIndices(3);
 
-			uint32_t tempIndices[3];
-			for (size_t iFace = 0; iFace < 3; iFace++)
+			for (size_t faceIndex{}; faceIndex < 3; ++faceIndex)
 			{
-				// OBJ format uses 1-based arrays
-				file >> iPosition;
-				vertex.position = positions[iPosition - 1];
+				VertexLocal vertexLocal{};
 
-				if ('/' == file.peek())//is next in buffer ==  '/' ?
+				size_t positionIndex;
+				file >> positionIndex;
+				vertexLocal.position = vPositions[positionIndex - 1]; // OBJ format uses 1-based arrays, hence -1
+
+				if (file.peek() == '/')
 				{
-					file.ignore();//read and ignore one element ('/')
+					file.ignore();
 
-					if ('/' != file.peek())
+					if (file.peek() != '/')
 					{
-						// Optional texture coordinate
-						file >> iTexCoord;
-						vertex.UVValue = UVs[iTexCoord - 1];
+						size_t UVIndex;
+						file >> UVIndex;
+						vertexLocal.UV = vUVs[UVIndex - 1]; // OBJ format uses 1-based arrays, hence -1
 					}
 
-					if ('/' == file.peek())
+					if (file.peek() == '/')
 					{
 						file.ignore();
 
-						// Optional vertex normal
-						file >> iNormal;
-						vertex.normal = normals[iNormal - 1];
+						size_t normalIndex;
+						file >> normalIndex;
+						vertexLocal.normal = vNormals[normalIndex - 1]; // OBJ format uses 1-based arrays, hence -1
+
+						vertexLocal.normal.Normalize();
 					}
 				}
 
-				m_vVertices.push_back(vertex);
-				tempIndices[iFace] = uint32_t(m_vVertices.size()) - 1;
-				//indices.push_back(uint32_t(vertices.size()) - 1);
+				m_vVerticesLocal.push_back(vertexLocal);
+				vTemporaryIndices[faceIndex] = static_cast<uint32_t>(m_vVerticesLocal.size() - 1);
 			}
 
-			m_vIndices.push_back(tempIndices[0]);
-			if (flipAxisAndWinding)
+			m_vIndices.push_back(vTemporaryIndices[0]);
+			if (!flipAxisAndWinding)
 			{
-				m_vIndices.push_back(tempIndices[2]);
-				m_vIndices.push_back(tempIndices[1]);
+				m_vIndices.push_back(vTemporaryIndices[1]);
+				m_vIndices.push_back(vTemporaryIndices[2]);
 			}
 			else
 			{
-				m_vIndices.push_back(tempIndices[1]);
-				m_vIndices.push_back(tempIndices[2]);
+				m_vIndices.push_back(vTemporaryIndices[2]);
+				m_vIndices.push_back(vTemporaryIndices[1]);
 			}
 		}
-		//read till end of line and ignore all remaining chars
-		file.ignore(1000, '\n');
+
+		file.ignore(1000, '\n'); // Read till end of line and ignore all remaining chars
 	}
 
-	//Cheap Tangent Calculations
-	for (uint32_t i = 0; i < m_vIndices.size(); i += 3)
+	// Cheap Tangent Calculation
+	for (size_t index{}; index < m_vIndices.size(); index += 3)
 	{
-		uint32_t index0 = m_vIndices[i];
-		uint32_t index1 = m_vIndices[size_t(i) + 1];
-		uint32_t index2 = m_vIndices[size_t(i) + 2];
+		const size_t
+			index0{ m_vIndices[index] },
+			index1{ m_vIndices[index + 1] },
+			index2{ m_vIndices[index + 2] };
 
-		const Vector3& p0 = m_vVertices[index0].position;
-		const Vector3& p1 = m_vVertices[index1].position;
-		const Vector3& p2 = m_vVertices[index2].position;
-		const Vector2& uv0 = m_vVertices[index0].UVValue;
-		const Vector2& uv1 = m_vVertices[index1].UVValue;
-		const Vector2& uv2 = m_vVertices[index2].UVValue;
+		const Vector2
+			& v0UV{ m_vVerticesLocal[index0].UV },
+			& v1UV{ m_vVerticesLocal[index1].UV },
+			& v2UV{ m_vVerticesLocal[index2].UV };
 
-		const Vector3 edge0 = p1 - p0;
-		const Vector3 edge1 = p2 - p0;
-		const Vector2 diffX = Vector2(uv1.x - uv0.x, uv2.x - uv0.x);
-		const Vector2 diffY = Vector2(uv1.y - uv0.y, uv2.y - uv0.y);
-		float r = 1.f / Vector2::Cross(diffX, diffY);
+		const Vector2
+			differenceX{ v1UV.x - v0UV.x, v2UV.x - v0UV.x },
+			differenceY{ v1UV.y - v0UV.y, v2UV.y - v0UV.y };
 
-		Vector3 tangent = (edge0 * diffY.y - edge1 * diffY.x) * r;
-		m_vVertices[index0].tangent += tangent;
-		m_vVertices[index1].tangent += tangent;
-		m_vVertices[index2].tangent += tangent;
+		const float 
+			cross{ Vector2::Cross(differenceX, differenceY) },
+			inversedCross{ cross ? (1.0f / cross) : 0.0f };
+
+		const Vector3 
+			& v0Position{ m_vVerticesLocal[index0].position },
+			& v1Position{ m_vVerticesLocal[index1].position },
+			& v2Position{ m_vVerticesLocal[index2].position },
+
+			edge0{ v1Position - v0Position },
+			edge1{ v2Position - v0Position },
+			tangent{ (edge0 * differenceY.y - edge1 * differenceY.x) * inversedCross };
+
+		m_vVerticesLocal[index0].tangent += tangent;
+		m_vVerticesLocal[index1].tangent += tangent;
+		m_vVerticesLocal[index2].tangent += tangent;
 	}
 
-	//Fix the tangents per vertex now because we accumulated
-	for (auto& v : m_vVertices)
+	m_vVerticesOut.resize(m_vVerticesLocal.size());
+
+	// Fix the tangents per vertex now because we accumulated
+	for (VertexLocal& vertexLocal : m_vVerticesLocal)
 	{
-		v.tangent = Vector3::Reject(v.tangent, v.normal).GetNormalized();
+		vertexLocal.tangent = Vector3::Reject(vertexLocal.tangent, vertexLocal.normal).GetNormalized();
 
 		if (flipAxisAndWinding)
 		{
-			v.position.z *= -1.f;
-			v.normal.z *= -1.f;
-			v.tangent.z *= -1.f;
+			vertexLocal.position.z *= -1.0f;
+			vertexLocal.normal.z *= -1.0f;
+			vertexLocal.tangent.z *= -1.0f;
 		}
 	}
-
-	m_vVerticesOut.resize(m_vVertices.size());
 
 	return true;
 }

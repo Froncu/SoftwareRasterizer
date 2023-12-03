@@ -19,7 +19,7 @@ public:
 
 	void Update(const Timer& timer);
 
-	const Matrix& GetViewMatrix() const;
+	const Matrix& GetInversedViewMatrix() const;
 	const Matrix& GetProjectionMatrix() const;
 	const Matrix& GetCameraMatrix() const;
 	const Vector3& GetOrigin() const;
@@ -30,9 +30,8 @@ public:
 	void IncrementFieldOfViewAngle(float angleIncrementer);
 
 private:
-	void UpdateViewMatrix();
+	void UpdateInversedViewMatrix();
 	void UpdateProjectionMatrix();
-	void UpdateCameraMatrix();
 
 	Vector3
 		m_Origin,
@@ -48,7 +47,6 @@ private:
 		m_TotalYaw;
 
 	Matrix
-		m_ViewMatrix,
-		m_ProjectionMatrix,
-		m_CameraMatrix;
+		m_InversedViewMatrix,
+		m_ProjectionMatrix;
 };

@@ -29,7 +29,7 @@ public:
 	void SetRotorY(float yaw);
 	void SetScalar(float scalar);
 
-	const std::vector<Vertex>& GetVertices() const;
+	const std::vector<VertexLocal>& GetVerticesLocal() const;
 	const std::vector<uint32_t>& GetIndices() const;
 	PrimitiveTopology GetPrimitiveTopology() const;
 	const Matrix& GetWorldMatrix() const;
@@ -43,7 +43,7 @@ public:
 private:
 	bool ParseOBJ(const std::string& path, bool flipAxisAndWinding);
 
-	std::vector<Vertex> m_vVertices;
+	std::vector<VertexLocal> m_vVerticesLocal;
 
 	std::vector<uint32_t> m_vIndices;
 	PrimitiveTopology m_PrimitiveTopology;
