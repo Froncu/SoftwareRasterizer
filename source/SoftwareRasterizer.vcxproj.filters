@@ -5,7 +5,7 @@
       <Filter>Mathematics</Filter>
     </ClInclude>
     <ClInclude Include="Camera.h">
-      <Filter>Miscellaneous\Camera</Filter>
+      <Filter>Objects\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Renderer.h">
       <Filter>Miscellaneous\Renderer</Filter>
@@ -14,10 +14,10 @@
       <Filter>Miscellaneous\Timer</Filter>
     </ClInclude>
     <ClInclude Include="Texture.h">
-      <Filter>Objects\Texture</Filter>
+      <Filter>Miscellaneous\Texture</Filter>
     </ClInclude>
     <ClInclude Include="ColorRGB.h">
-      <Filter>Objects\ColorRGB</Filter>
+      <Filter>Miscellaneous\ColorRGB</Filter>
     </ClInclude>
     <ClInclude Include="Vector4.h">
       <Filter>Mathematics\Vectors\Vector4</Filter>
@@ -34,20 +34,20 @@
     <ClInclude Include="Mesh.h">
       <Filter>Objects\Mesh</Filter>
     </ClInclude>
-    <ClInclude Include="Vertex.hpp">
-      <Filter>Objects</Filter>
-    </ClInclude>
     <ClInclude Include="BRDFs.hpp">
       <Filter>Mathematics</Filter>
     </ClInclude>
     <ClInclude Include="Constants.hpp">
       <Filter>Mathematics</Filter>
     </ClInclude>
+    <ClInclude Include="Vertex.hpp">
+      <Filter>Objects</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Camera.cpp">
-      <Filter>Miscellaneous\Camera</Filter>
+      <Filter>Objects\Camera</Filter>
     </ClCompile>
     <ClCompile Include="Renderer.cpp">
       <Filter>Miscellaneous\Renderer</Filter>
@@ -56,10 +56,10 @@
       <Filter>Miscellaneous\Timer</Filter>
     </ClCompile>
     <ClCompile Include="Texture.cpp">
-      <Filter>Objects\Texture</Filter>
+      <Filter>Miscellaneous\Texture</Filter>
     </ClCompile>
     <ClCompile Include="ColorRGB.cpp">
-      <Filter>Objects\ColorRGB</Filter>
+      <Filter>Miscellaneous\ColorRGB</Filter>
     </ClCompile>
     <ClCompile Include="Vector4.cpp">
       <Filter>Mathematics\Vectors\Vector4</Filter>
@@ -84,23 +84,8 @@
     <Filter Include="Miscellaneous">
       <UniqueIdentifier>{6ed22c6b-6c76-49fa-8f5c-fb129c3373fa}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Miscellaneous\Camera">
-      <UniqueIdentifier>{94ff96c8-8b86-44e8-81b0-3e9e913ea71a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Miscellaneous\Renderer">
-      <UniqueIdentifier>{1a2cfd21-10b5-406d-8e7f-689aee5536b1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Miscellaneous\Timer">
-      <UniqueIdentifier>{72fc4e59-1da6-472b-b09e-4947a43e2294}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Objects">
       <UniqueIdentifier>{9eb1c226-e5ee-4dc8-863d-98204742ee8b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Objects\Texture">
-      <UniqueIdentifier>{eb839eef-daa5-4620-8b3a-ede38a17b5cb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Objects\ColorRGB">
-      <UniqueIdentifier>{d4d469cd-2dfa-406d-8648-772915894ea5}</UniqueIdentifier>
     </Filter>
     <Filter Include="Mathematics\Vectors">
       <UniqueIdentifier>{c89864c9-3e3d-4fef-9d93-ce23413532f8}</UniqueIdentifier>
@@ -117,8 +102,23 @@
     <Filter Include="Mathematics\Matrix">
       <UniqueIdentifier>{3fe458be-b8d9-4a31-b102-e4702d2131be}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Objects\Camera">
+      <UniqueIdentifier>{94ff96c8-8b86-44e8-81b0-3e9e913ea71a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Miscellaneous\ColorRGB">
+      <UniqueIdentifier>{d4d469cd-2dfa-406d-8648-772915894ea5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Miscellaneous\Texture">
+      <UniqueIdentifier>{eb839eef-daa5-4620-8b3a-ede38a17b5cb}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Objects\Mesh">
       <UniqueIdentifier>{49e590f7-ee9a-4977-91da-45de37ceefd6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Miscellaneous\Renderer">
+      <UniqueIdentifier>{1a2cfd21-10b5-406d-8e7f-689aee5536b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Miscellaneous\Timer">
+      <UniqueIdentifier>{72fc4e59-1da6-472b-b09e-4947a43e2294}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

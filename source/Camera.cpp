@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "Camera.h"
 #include "SDL_keyboard.h"
 #include "SDL_mouse.h"
@@ -22,6 +24,15 @@ Camera::Camera(const Vector3& origin, float fieldOfViewAngle) :
 	UpdateInversedViewMatrix();
 	UpdateProjectionMatrix();
 }
+#pragma endregion
+
+
+
+#pragma region Static Data Members
+const float
+Camera::NEAR_PLANE{ 0.1f },
+Camera::FAR_PLANE{ 100.0f },
+Camera::DELTA_NEAR_FAR_PLANE{ FAR_PLANE - NEAR_PLANE };
 #pragma endregion
 
 
@@ -67,25 +78,25 @@ void Camera::Update(const Timer& timer)
 	//	Keyboard Input
 	const uint8_t* pKeyboardState{ SDL_GetKeyboardState(nullptr) };
 
-	if (pKeyboardState[SDL_SCANCODE_W])
+	if (pKeyboardState[SDL_SCANCODE_W] || pKeyboardState[SDL_SCANCODE_UP])
 	{
 		m_Origin += m_ForwardDirection * deltaTime * MOVEMENT_SPEED;
 		UpdateInversedViewMatrix();
 	}
 
-	if (pKeyboardState[SDL_SCANCODE_S])
+	if (pKeyboardState[SDL_SCANCODE_S] || pKeyboardState[SDL_SCANCODE_DOWN])
 	{
 		m_Origin -= m_ForwardDirection * deltaTime * MOVEMENT_SPEED;
 		UpdateInversedViewMatrix();
 	}
 
-	if (pKeyboardState[SDL_SCANCODE_A])
+	if (pKeyboardState[SDL_SCANCODE_A] || pKeyboardState[SDL_SCANCODE_LEFT])
 	{
 		m_Origin -= m_RightDirection * deltaTime * MOVEMENT_SPEED;
 		UpdateInversedViewMatrix();
 	}
 
-	if (pKeyboardState[SDL_SCANCODE_D])
+	if (pKeyboardState[SDL_SCANCODE_D] || pKeyboardState[SDL_SCANCODE_RIGHT])
 	{
 		m_Origin += m_RightDirection * deltaTime * MOVEMENT_SPEED;
 		UpdateInversedViewMatrix();
@@ -131,6 +142,13 @@ void Camera::SetFieldOfViewAngle(float angle)
 	m_FieldOfViewAngle = std::max(FLT_EPSILON, std::min(angle, MAX_FOV_ANGLE));
 	m_FieldOfViewValue = tanf(m_FieldOfViewAngle / 2.0f);
 
+	system("CLS");
+	std::cout
+		<< CONTROLS
+		<< "--------\n"
+		<< "FIELD OF VIEW ANGLE: " << TO_DEGREES * m_FieldOfViewAngle << " degrees\n"
+		<< "--------\n";
+
 	UpdateProjectionMatrix();
 }
 
@@ -164,14 +182,9 @@ void Camera::UpdateInversedViewMatrix()
 
 void Camera::UpdateProjectionMatrix()
 {
-	static constexpr float
-		NEAR_PLANE{ 0.1f },
-		FAR_PLANE{ 100.0f },
-		DELTA_NEAR_FAR{ FAR_PLANE - NEAR_PLANE };
-
-	static constexpr Vector4
-		Z_AXIS{ 0.0f, 0.0f, FAR_PLANE / DELTA_NEAR_FAR, 1.0f },
-		TRANSLATOR{ 0.0f, 0.0f, -FAR_PLANE * NEAR_PLANE / DELTA_NEAR_FAR, 0.0f };
+	static const Vector4
+		Z_AXIS{ 0.0f, 0.0f, FAR_PLANE / DELTA_NEAR_FAR_PLANE, 1.0f },
+		TRANSLATOR{ 0.0f, 0.0f, -FAR_PLANE * NEAR_PLANE / DELTA_NEAR_FAR_PLANE, 0.0f };
 
 	m_ProjectionMatrix = Matrix
 	(

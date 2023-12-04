@@ -37,4 +37,5 @@ CYAN{ 0.0f, 1.0f, 1.0f },
 MAGENTA{ 1.0f, 0.0f, 1.0f },
 WHITE{ 1.0f, 1.0f, 1.0f },
 BLACK{ 0.0f, 0.0f, 0.0f },
-GRAY{ 0.5f ,0.5f ,0.5f };
+GRAY{ 0.5f ,0.5f ,0.5f },
+DARK_GRAY{ 0.25f ,0.25f ,0.25f };

@@ -1,4 +1,5 @@
 #include <cmath>
+#include <iostream>
 
 #include "Constants.hpp"
 #include "Renderer.h"
@@ -17,7 +18,7 @@ Renderer::Renderer(SDL_Window* pWindow) :
 
 	m_pDepthBufferPixels{ new float[WINDOW_WIDTH * WINDOW_HEIGHT] },
 
-	m_Camera{ Vector3(0.0f, 0.0f, 0.0f), TO_RADIANS * 45.0f },
+	m_Camera{ Vector3(0.0f, 5.0f, -64.0f), TO_RADIANS * 45.0f },
 
 	m_vMeshes
 	{
@@ -29,9 +30,15 @@ Renderer::Renderer(SDL_Window* pWindow) :
 			"Resources/vehicle_specular.png",
 			"Resources/vehicle_gloss.png"
 		),
-	}
+	},
+
+	m_RotateMeshes{ true },
+	m_UseNormalTextures{ true },
+	m_RenderDepthBuffer{},
+	m_InterpolateTexuresBilinearly{ true },
+
+	m_LightingMode{ LightingMode::combined }
 {
-	m_vMeshes[0].SetTranslator(Vector3(0.0f, 0.0f, 50.0f));
 }
 
 Renderer::~Renderer()
@@ -47,8 +54,13 @@ void Renderer::Update(const Timer& timer)
 {
 	m_Camera.Update(timer);
 
-	for (Mesh& mesh : m_vMeshes)
-		mesh.SetRotorY(timer.GetTotal());
+	static float elapsedTimeSinceStoppedRotating{};
+
+	if (m_RotateMeshes)
+		for (Mesh& mesh : m_vMeshes)
+			mesh.SetRotorY(timer.GetTotal() - elapsedTimeSinceStoppedRotating);
+	else
+		elapsedTimeSinceStoppedRotating += timer.GetElapsed();
 }
 
 void Renderer::Render()
@@ -122,25 +134,29 @@ void Renderer::Render()
 					if (!DepthTest(pixelIndex, v0InterpolatedWeight, v1InterpolatedWeight, v2InterpolatedWeight, interpolatedPixelDepth))
 						continue;
 
-					const VertexOut pixelAttributes
-					{
-						GetPixelAttributes(
-						v0, v1, v2,
-						v0InterpolatedWeight, v1InterpolatedWeight, v2InterpolatedWeight,
-						interpolatedPixelDepth)
-					};
+					ColorRGB finalPixelColor;
 
-					const ColorRGB finalPixelColor
+					if (m_RenderDepthBuffer)
+						finalPixelColor = WHITE * ((interpolatedPixelDepth - m_Camera.NEAR_PLANE) / m_Camera.DELTA_NEAR_FAR_PLANE);
+					else
 					{
-						GetShadedPixelColor
+						const VertexOut pixelAttributes
+						{
+							GetPixelAttributes(
+							v0, v1, v2,
+							v0InterpolatedWeight, v1InterpolatedWeight, v2InterpolatedWeight,
+							interpolatedPixelDepth)
+						};
+
+						finalPixelColor = GetShadedPixelColor
 						(
 							pixelAttributes,
 							mesh.GetColorTexture(),
 							mesh.GetNormalTexture(),
 							mesh.GetSpecularTexture(),
 							mesh.GetSpecularTexture()
-						)
-					};
+						);
+					}
 
 					m_pBackBufferPixels[pixelIndex] = SDL_MapRGB(m_pBackBuffer->format,
 						static_cast<uint8_t>(finalPixelColor.red * 255),
@@ -156,6 +172,98 @@ void Renderer::Render()
 	SDL_UpdateWindowSurface(m_pWindow);
 }
 
+void Renderer::ToggleBilinearTextureInterpolation()
+{
+	m_InterpolateTexuresBilinearly = !m_InterpolateTexuresBilinearly;
+
+	system("CLS");
+	std::cout
+		<< CONTROLS
+		<< "--------\n"
+		<< "INTERPOLATED TEXTURE BILINEARLY: " << std::boolalpha << m_InterpolateTexuresBilinearly << std::endl
+		<< "--------\n";
+}
+
+void Renderer::ToggleRenderDepthBuffer()
+{
+	m_RenderDepthBuffer = !m_RenderDepthBuffer;
+
+	system("CLS");
+	std::cout
+		<< CONTROLS
+		<< "--------\n"
+		<< "RENDER DEPTH BUFFER: " << std::boolalpha << m_RenderDepthBuffer << std::endl
+		<< "--------\n";
+}
+
+void Renderer::ToggleRotateMeshes()
+{
+	m_RotateMeshes = !m_RotateMeshes;
+
+	system("CLS");
+	std::cout
+		<< CONTROLS
+		<< "--------\n"
+		<< "ROTATION: " << std::boolalpha << m_RotateMeshes << std::endl
+		<< "--------\n";
+}
+
+void Renderer::ToggleUseNormalTextures()
+{
+	m_UseNormalTextures = !m_UseNormalTextures;
+
+	system("CLS");
+	std::cout
+		<< CONTROLS
+		<< "--------\n"
+		<< "USE NORMAL TEXTURES: " << std::boolalpha << m_UseNormalTextures << std::endl
+		<< "--------\n";
+}
+
+void Renderer::CycleShadingMode()
+{
+	m_LightingMode = LightingMode((int(m_LightingMode) + 1) % int(LightingMode::AMOUNT));
+
+	switch (m_LightingMode)
+	{
+	case Renderer::LightingMode::observedArea:
+		system("CLS");
+		std::cout
+			<< CONTROLS
+			<< "--------\n"
+			<< "LIGHTING MODE: Observed Area\n"
+			<< "--------\n";
+		break;
+
+	case Renderer::LightingMode::diffuse:
+		system("CLS");
+		std::cout
+			<< CONTROLS
+			<< "--------\n"
+			<< "LIGHTING MODE: Diffuse\n"
+			<< "--------\n";
+		break;
+
+	case Renderer::LightingMode::specular:
+		system("CLS");
+		std::cout
+			<< CONTROLS
+			<< "--------\n"
+			<< "LIGHTING MODE: Specular\n"
+			<< "--------\n";
+		break;
+
+	case Renderer::LightingMode::combined:
+		system("CLS");
+		std::cout
+			<< CONTROLS
+			<< "--------\n"
+			<< "LIGHTING MODE: Combined\n"
+			<< "--------\n";
+		break;
+	}
+}
+
 bool Renderer::SaveBufferToImage() const
 {
 	return SDL_SaveBMP(m_pBackBuffer, "Rasterizer_ColorBuffer.bmp");
@@ -167,7 +275,7 @@ bool Renderer::SaveBufferToImage() const
 #pragma region Private Methods
 void Renderer::ResetBuffers()
 {
-	static constexpr ColorRGB SPACE_COLOR{ GRAY };
+	static constexpr ColorRGB SPACE_COLOR{ DARK_GRAY };
 
 	std::fill_n(m_pDepthBufferPixels, WINDOW_PIXEL_COUNT, INFINITY);
 	std::fill_n(m_pBackBufferPixels, WINDOW_PIXEL_COUNT, SDL_MapRGB(m_pBackBuffer->format,
@@ -310,40 +418,66 @@ VertexOut Renderer::GetPixelAttributes(const VertexOut& v0, const VertexOut& v1,
 
 	pixelAttributes.normal = v0.normal * v0InterpolatedWeight + v1.normal * v1InterpolatedWeight + v2.normal * v2InterpolatedWeight;
 	pixelAttributes.normal *= interpolatedPixelDepth;
+	pixelAttributes.normal.Normalize();
 
 	pixelAttributes.tangent = v0.tangent * v0InterpolatedWeight + v1.tangent * v1InterpolatedWeight + v2.tangent * v2InterpolatedWeight;
 	pixelAttributes.tangent *= interpolatedPixelDepth;
+	pixelAttributes.tangent.Normalize();
 
 	pixelAttributes.viewDirection = v0.viewDirection * v0InterpolatedWeight + v1.viewDirection * v1InterpolatedWeight + v2.viewDirection * v2InterpolatedWeight;
 	pixelAttributes.viewDirection *= interpolatedPixelDepth;
+	pixelAttributes.viewDirection.Normalize();
 
 	return pixelAttributes;
 }
 
 ColorRGB Renderer::GetShadedPixelColor(const VertexOut& pixelAttributes, const Texture& colorTexture, const Texture& normalTexture, const Texture& specularTexture, const Texture& glossTexture)
 {
-	static constexpr Vector3 LIGHT_DIRECTION{ -0.577f, 0.577f, -0.577f };
-	static constexpr float LIGHT_INTENSITY{ 7.0f }, SHININESS{ 25.0f };
-	static constexpr ColorRGB AMBIENT_COLOR{ 0.025f, 0.025f, 0.025f };
+	static const Vector3 LIGHT_DIRECTION{ 0.577f, -0.577f, 0.577f };
+	static constexpr float DIFFUSE_REFLECTANCE{ 7.0f }, SHININESS{ 25.0f };
+	static constexpr ColorRGB AMBIENT_COLOR{ 0.03f, 0.03f, 0.03f };
 
 	const Vector2& UV{ pixelAttributes.UV };
 
-	const Vector3 sampledNormal{ GetSampledNormal(UV, pixelAttributes.normal, pixelAttributes.tangent, normalTexture) };
+	const Vector3& usedNormal{ m_UseNormalTextures ? GetSampledNormal(UV, pixelAttributes.normal, pixelAttributes.tangent, normalTexture) : pixelAttributes.normal };
 
-	const float
-		dotLightDirectionNormal{ std::max(Vector3::Dot(LIGHT_DIRECTION, sampledNormal), 0.0f) },
-		phongExponent{ SHININESS * specularTexture.Sample(UV).red };
-	const ColorRGB specularReflectance{ glossTexture.Sample(UV) };
+	const float phongExponent{ SHININESS * glossTexture.Sample(UV, m_InterpolateTexuresBilinearly).red };
 
-	return
-		((Lambert(LIGHT_INTENSITY, colorTexture.Sample(UV)) +
-		Phong(specularReflectance, phongExponent, LIGHT_DIRECTION, pixelAttributes.viewDirection, sampledNormal) +
-		AMBIENT_COLOR) * dotLightDirectionNormal).GetMaxToOne();
+	const ColorRGB
+		specularReflectance{ specularTexture.Sample(UV, m_InterpolateTexuresBilinearly) },
+
+		diffuse{ Lambert(DIFFUSE_REFLECTANCE, colorTexture.Sample(UV, m_InterpolateTexuresBilinearly)) },
+		specular{ Phong(specularReflectance, phongExponent, LIGHT_DIRECTION, pixelAttributes.viewDirection, usedNormal) };
+
+	ColorRGB finalColor{ AMBIENT_COLOR };
+
+	switch (m_LightingMode)
+	{
+	case Renderer::LightingMode::observedArea:
+		finalColor = WHITE;
+		break;
+
+	case Renderer::LightingMode::diffuse:
+		finalColor += diffuse;
+		break;
+
+	case Renderer::LightingMode::specular:
+		finalColor += specular;
+		break;
+
+	case Renderer::LightingMode::combined:
+		finalColor += diffuse + specular;
+		break;
+	}
+
+	const float dotLightDirectionNormal{ std::max(Vector3::Dot(-LIGHT_DIRECTION, usedNormal), 0.0f) };
+
+	return (dotLightDirectionNormal * finalColor).GetMaxToOne();
 }
 
 Vector3 Renderer::GetSampledNormal(const Vector2& UV, const Vector3& normal, const Vector3& tangent, const Texture& normalTexture)
 {
-	const ColorRGB sampledNormalInColor{ normalTexture.Sample(UV) * 2.0f - WHITE };
+	const ColorRGB sampledNormalInColor{ normalTexture.Sample(UV, m_InterpolateTexuresBilinearly) * 2.0f - WHITE };
 
 	const Vector3 binormal{ Vector3::Cross(normal, tangent).GetNormalized() };
 
@@ -353,6 +487,6 @@ Vector3 Renderer::GetSampledNormal(const Vector2& UV, const Vector3& normal, con
 		binormal.GetVector4(),
 		normal.GetVector4(),
 		VECTOR4_ZERO
-	).TransformVector(Vector3(sampledNormalInColor.red, sampledNormalInColor.green, sampledNormalInColor.blue));
+	).TransformVector(Vector3(sampledNormalInColor.red, sampledNormalInColor.green, sampledNormalInColor.blue)).GetNormalized();
 }
 #pragma endregion
