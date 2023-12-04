@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "SDL_stdinc.h"
+
 struct ColorRGB;
 struct Vector2;
 struct SDL_Surface;
@@ -17,10 +19,12 @@ public:
 
 	Texture(const std::string& path);
 
-	ColorRGB Sample(const Vector2& uv) const;
+	ColorRGB Sample(const Vector2& UV, bool interpolateBilinearly = true) const;
 
 private:
+	ColorRGB GetColor(const Vector2& texelPosition) const;
+
 	std::string m_Path;
 	SDL_Surface* m_pSurface;
-	uint32_t* m_pSurfacePixels;
+	Uint32* m_pSurfacePixels;
 };
