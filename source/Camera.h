@@ -21,13 +21,17 @@ public:
 
 	const Matrix& GetInversedViewMatrix() const;
 	const Matrix& GetProjectionMatrix() const;
-	const Matrix& GetCameraMatrix() const;
 	const Vector3& GetOrigin() const;
 	float GetFieldOfViewValue() const;
 
 	void SetOrigin(const Vector3& origin);
 	void SetFieldOfViewAngle(float angle);
 	void IncrementFieldOfViewAngle(float angleIncrementer);
+
+	static const float
+		NEAR_PLANE,
+		FAR_PLANE,
+		DELTA_NEAR_FAR_PLANE;
 
 private:
 	void UpdateInversedViewMatrix();

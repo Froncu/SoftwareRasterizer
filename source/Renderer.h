@@ -22,6 +22,12 @@ public:
 
 	void Update(const Timer& timer);
 	void Render();
+	
+	void ToggleBilinearTextureInterpolation();
+	void ToggleRenderDepthBuffer();
+	void ToggleRotateMeshes();
+	void ToggleUseNormalTextures();
+	void CycleShadingMode();
 
 	bool SaveBufferToImage() const;
 
@@ -61,4 +67,20 @@ private:
 	float* m_pDepthBufferPixels;
 
 	std::vector<Mesh> m_vMeshes;
+
+	bool 
+		m_RotateMeshes,
+		m_UseNormalTextures,
+		m_RenderDepthBuffer,
+		m_InterpolateTexuresBilinearly;
+
+	enum class LightingMode
+	{
+		observedArea,
+		diffuse,
+		specular,
+		combined,
+
+		AMOUNT
+	} m_LightingMode;
 };

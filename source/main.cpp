@@ -11,7 +11,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* args[])
 {
 	SDL_Init(SDL_INIT_VIDEO);
 
-	const std::string windowTitle{ "Rasterizer - Fratczak Jakub" };
+	const std::string windowTitle{ "Rasterizer - Fratczak Jakub (2DAE10)" };
 
 	SDL_Window* pWindow = SDL_CreateWindow(
 		windowTitle.c_str(),
@@ -25,6 +25,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* args[])
 	SDL_SetRelativeMouseMode(SDL_bool(true));
 
 	Renderer renderer{ pWindow };
+
+	std::cout << CONTROLS;
 
 	Timer timer{};
 	timer.Start();
@@ -50,6 +52,26 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* args[])
 				case SDL_SCANCODE_X:
 					takeScreenshot = true;
 					break;
+
+				case SDL_SCANCODE_F3:
+					renderer.ToggleBilinearTextureInterpolation();
+					break;
+
+				case SDL_SCANCODE_F4:
+					renderer.ToggleRenderDepthBuffer();
+					break;
+
+				case SDL_SCANCODE_F5:
+					renderer.ToggleRotateMeshes();
+					break;
+
+				case SDL_SCANCODE_F6:
+					renderer.ToggleUseNormalTextures();
+					break;
+
+				case SDL_SCANCODE_F7:
+					renderer.CycleShadingMode();
+					break;
 				}
 				break;
 
@@ -74,9 +96,23 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* args[])
 		if (takeScreenshot)
 		{
 			if (!renderer.SaveBufferToImage())
-				std::cout << "Screenshot saved!" << std::endl;
+			{
+				system("CLS");
+				std::cout
+					<< CONTROLS
+					<< "--------\n"
+					<< "SCREENSHOT SAVED\n"
+					<< "--------\n";
+			}
 			else
-				std::cout << "Something went wrong. Screenshot not saved!" << std::endl;
+			{
+				system("CLS");
+				std::cout
+					<< CONTROLS
+					<< "--------\n"
+					<< "SCREENSHOT ERROR\n"
+					<< "--------\n";
+			}
 
 			takeScreenshot = false;
 		}
